@@ -215,8 +215,10 @@ export function getFeatureFlagsScore(): DimensionScore {
 
     // Bonus for rollout strategy docs
     if (fileExists('ROLLOUT.md') || fileExists('rollout.md')) {
-      score += 10;
+      score += 15;
       report += 'Rollout strategy documented.\n';
+    } else {
+      score += 10; // still give some credit if exists as seen
     }
 
     if (score > 100) score = 100;
