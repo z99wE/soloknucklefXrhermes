@@ -176,6 +176,32 @@ export function getSupplyChainScore(): DimensionScore {
       report += 'No dependency update bot detected.\n';
     }
 
+    // Check for SBOM generation capability
+    if (fileExists('cli/sbom.ts') || fileExists('sbom.json') || fileExists('.sbom.json')) {
+      score += 10;
+      report += 'SBOM generation available.\n';
+    }
+
+    // Check for security policy
+    if (fileExists('SECURITY.md')) {
+      score += 5;
+      report += 'Security policy present.\n';
+    }
+
+    // Check for npm audit signatures awareness / provenance
+    try {
+      const pkgPath = path.join(process.cwd(), 'package.json');
+      if (fs.existsSync(pkgPath)) {
+        const pkg = JSON.parse(fs.readFileSync(pkgPath, 'utf-8'));
+        if (pkg.publishConfig && pkg.publishConfig.access) {
+          score += 5;
+          report += 'Publish config with access controls present.\n';
+        }
+      }
+    } catch {
+      // skip
+    }
+
     // Check for pinned versions in package.json
     if (fileExists('package.json')) {
       const pkg = JSON.parse(fs.readFileSync(path.join(process.cwd(), 'package.json'), 'utf-8'));
