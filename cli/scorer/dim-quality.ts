@@ -84,7 +84,8 @@ export function getQualityScore(): DimensionScore {
 
     scanSourceFiles(cwd, (_fullPath, relPath, content) => {
       // 1. Leftover debugger statement
-      if (/\bdebugger\b;?/.test(content)) {
+      const contentNoComments = content.replace(/\/\*[\s\S]*?\*\//g, '').replace(/\/\/.*$/gm, '');
+      if (/\bdebugger\b\s*;?/.test(contentNoComments)) {
         smellDeductions += 10;
         smellNotes += `Debugger statement detected in ${relPath}.\n`;
       }
