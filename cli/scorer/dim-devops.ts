@@ -113,13 +113,13 @@ export function getCIPipelineScore(): DimensionScore {
       let hasTypecheck = false;
       let hasSecurityAudit = false;
       // Word-boundary regexes so "latest"/"protect" don't count as "test", etc.
-      const hasWord = (content: string, token: string) => new RegExp(`\\b${token}\\b`, 'i').test(content);
+      const hasWord = (content: string, token: string) => new RegExp(`\\b${token.replace('-', '\\-')}\\b`, 'i').test(content);
       for (const file of files) {
         const content = fs.readFileSync(path.join(workflowDir, file), 'utf-8');
         if (['test', 'vitest', 'jest'].some((t) => hasWord(content, t))) hasTest = true;
-        if (['lint', 'eslint', 'eslint'].some((t) => hasWord(content, t))) hasLint = true;
-        if (['typecheck', 'tsc', 'type-check'].some((t) => hasWord(content, t))) hasTypecheck = true;
-        if (['audit', 'snyk', 'codeql', 'gitleaks', 'npm-audit'].some((t) => hasWord(content, t))) hasSecurityAudit = true;
+        if (['lint', 'eslint'].some((t) => hasWord(content, t))) hasLint = true;
+        if (['typecheck', 'tsc'].some((t) => hasWord(content, t)) || /type-check/i.test(content)) hasTypecheck = true;
+        if (['audit', 'snyk', 'codeql', 'gitleaks'].some((t) => hasWord(content, t)) || /npm.*audit/i.test(content)) hasSecurityAudit = true;
       }
       if (hasTest) { score += 10; report += 'CI runs tests.\n'; }
       if (hasLint) { score += 10; report += 'CI runs linting.\n'; }
