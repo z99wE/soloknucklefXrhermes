@@ -27,7 +27,7 @@ describe('reporter', () => {
 
   describe('printScoreSummary', () => {
     it('should show Production-ready for score >= 90', () => {
-      printScoreSummary(95);
+      printScoreSummary(97);
       const output = consoleSpy.mock.calls.map((c) => c[0]).join('\n');
       expect(output).toContain('97/100');
       expect(output).toContain('Production-ready');
