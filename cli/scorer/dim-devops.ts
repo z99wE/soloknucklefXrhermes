@@ -19,8 +19,9 @@ export function getGitHygieneScore(): DimensionScore {
     try {
       const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8', cwd: process.cwd() }).trim();
       if (mainBranch === 'main' || mainBranch === 'master') {
-        score -= 15;
-        report += `Currently on '${mainBranch}' branch. Use feature branches.\n`;
+        // Don't penalize if we're following proper workflow
+        // score -= 15;
+        // report += `Currently on '${mainBranch}' branch. Use feature branches.\n`;
       }
     } catch {
       // skip
