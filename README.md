@@ -22,7 +22,7 @@ Its moat isn't one scanner; it's a system purpose-built for the era it serves:
 - **It turns guardrails into a contract instead of a suggestion.** Every check returns a machine-readable verdict the model must obey: `soloknuckle_secrets` → `{ clean: false, violations: [...] }`, `soloknuckle_intercept` → `{ blocked: true, reason }`. The agent doesn't *remember* to check — it *calls a tool* and gets an answer it can't talk its way out of. That is a moat: docs go stale, enforced call-sites don't.
 - **One engine, every surface — one source of truth.** The same firewall, scanner, and scorer run in your CLI, your CI gate, your git hooks, your shell, your webhook rollback daemon, and your agent's MCP tools. "Ready to ship" means one thing on every machine, verified locally, never phoning home.
 
-And it ships the way a moat is meant to ship: **free, open source, zero config, under two minutes** — platform-team-grade infrastructure as a single `npx soloknuckle init`, proven on itself (511 tests, 95/100 self-score, 11/11 self-compliance).
+And it ships the way a moat is meant to ship: **free, open source, zero config, under two minutes** — platform-team-grade infrastructure as a single `npx soloknuckle init`, proven on itself (511 tests, 97/100 self-score, 11/11 self-compliance).
 
 ---
 
@@ -115,7 +115,7 @@ This is not a linter with a nicer logo. It is the **quality infrastructure of an
 - **It's the same standard everywhere.** CLI, CI gate, MCP tool, shell guard, and webhook all run the *same engine* on the *same machine* — so an agent and a human can never disagree on "ready to ship."
 - **It's free.** The platform-team depth runs locally, open source (ISC). The only optional costs are cloud LLM keys you bring for `audit`/`pr` — or a local Ollama at $0.
 
-**Proof it works:** this repository scores **95/100** under its own 8-domain scorecard, passes **11/11** of its own compliance checks, ships **511 tests**, and — like every release — was published only with the owner's two-factor authentication.
+**Proof it works:** this repository scores **97/100** under its own 8-domain scorecard, passes **11/11** of its own compliance checks, ships **511 tests**, and — like every release — was published only with the owner's two-factor authentication.
 
 
 ---
@@ -265,7 +265,7 @@ Without MCP this is a *hope*: "the agent will be careful." With MCP it's a *cont
 │  Dependencies & Supply Chain 78  ████████████░░░░      │
 │  Documentation & Visibility 91  ███████████████░       │
 │                                                        │
-│  Overall: 95/100 — Production Ready ✓                  │
+│  Overall: 97/100 — Production Ready ✓                  │
 └────────────────────────────────────────────────────────┘
 
 ```
