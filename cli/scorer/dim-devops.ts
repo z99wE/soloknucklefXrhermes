@@ -19,9 +19,8 @@ export function getGitHygieneScore(): DimensionScore {
     try {
       const mainBranch = execSync('git rev-parse --abbrev-ref HEAD', { encoding: 'utf-8', cwd: process.cwd() }).trim();
       if (mainBranch === 'main' || mainBranch === 'master') {
-        // Don't penalize if we're following proper workflow
-        // score -= 15;
-        // report += `Currently on '${mainBranch}' branch. Use feature branches.\n`;
+        score -= 15;
+        report += `Currently on '${mainBranch}' branch. Use feature branches.\n`;
       }
     } catch {
       // skip
@@ -219,7 +218,7 @@ export function getFeatureFlagsScore(): DimensionScore {
       score += 15;
       report += 'Rollout strategy documented.\n';
     } else {
-      score += 10; // still give some credit if exists as seen
+      report += 'No ROLLOUT.md found. Document your rollout strategy.\n';
     }
 
     if (score > 100) score = 100;

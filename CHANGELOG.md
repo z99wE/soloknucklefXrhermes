@@ -4,6 +4,19 @@ All notable changes to Soloknuckle will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [1.3.1] - 2026-10-30
+
+### Fixed
+
+- **Git hygiene scoring ignores direct commits to `main`** — the main-branch penalty had been commented out, so a project committing straight to `main`/`master` still scored a perfect 100 on Git Hygiene. The 15-point penalty and its warning are restored.
+- **Feature flags scored 10 points for a missing `ROLLOUT.md`** — projects with no rollout documentation at all were awarded 10/100 for nothing. That credit is removed; the missing file is now reported instead.
+
+### Changed
+
+- **Supply chain scoring** now credits SBOM generation, a `SECURITY.md` security policy, and `publishConfig.access` controls.
+- **CI/CD pipeline detection** matches hyphenated and multi-word tokens correctly (`type-check`, `npm audit`), so those steps are no longer missed.
+- **Debugger detection** strips comments before matching, removing false positives when the word "debugger" appears in a comment or docstring.
+
 ## [1.3.0] - 2026-10-04
 
 ### Added
