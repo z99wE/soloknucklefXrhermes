@@ -1,4 +1,0 @@
-# Cursor auto-loads .cursorrules — this symlink makes the Skill work in Cursor too.
-# See SKILL.md for the full content (symlinked to keep one source of truth).
-
-Read SKILL.md and AGENTS.md in this project root. Follow them as law.

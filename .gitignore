@@ -1,17 +1,27 @@
 node_modules/
 dist/
+dist-bin/
+coverage/
+.vitest/
+
+# Local environment
 .env
 .env.*
 .DS_Store
+
+# Editors
 .vscode/
-# VSCode extension source (hidden from public repo for now)
-vscode/
 .idea/
+
+# Python (the Hermes plugin)
+__pycache__/
+*.py[cod]
+.pytest_cache/
+
+# Soloknuckle's own per-project state
 .soloknuckle/
-flags.json
-PR_DESCRIPTION.md
+
 *.log
-coverage/
-dist-bin/
-.freebuff/
-.vitest/
+
+# Local scratch
+PR_DESCRIPTION.md
