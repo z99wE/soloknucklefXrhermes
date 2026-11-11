@@ -5,11 +5,12 @@ import { handleRequest, serve, TOOLS } from '../cli/mcp-server';
 // The health tool shells out to npm/git. In a test run that would invoke this
 // very suite again (npm test -> vitest -> health -> npm test ...), so the
 // process boundary is stubbed: the tool still returns its documented shape.
-vi.mock('child_process', () => ({
-  execSync: () => {
+vi.mock('child_process', () => {
+  const disabled = () => {
     throw new Error('child_process disabled in tests');
-  },
-}));
+  };
+  return { execSync: disabled, execFileSync: disabled };
+});
 
 /** Drive the MCP transport with in-memory streams instead of process globals. */
 function runServe(lines: string[]): Promise<string[]> {

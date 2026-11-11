@@ -109,10 +109,16 @@ def scan_secrets(diff: str) -> Dict[str, Any]:
 
 def current_git_diff(cwd: Optional[str] = None) -> str:
     """Staged diff if there is one, else unstaged. Empty string outside a repo."""
+    run_cwd = cwd or os.getcwd()
     for argv in (["git", "diff", "--cached"], ["git", "diff"]):
         try:
             result = subprocess.run(
-                argv, capture_output=True, text=True, timeout=10, cwd=cwd or os.getcwd()
+                argv,
+                capture_output=True,
+                text=True,
+                timeout=10,
+                cwd=run_cwd,
+                env=os.environ.copy(),
             )
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return ""
@@ -182,11 +188,15 @@ def calculate_health(cwd: Optional[str] = None) -> Dict[str, Any]:
         issues.append("Lint: no package.json")
     else:
         try:
+            # Run the project's own script (side effects by definition) with no
+            # shell and an explicit timeout. It inherits the environment because
+            # the script may legitimately depend on it.
             result = subprocess.run(
                 ["npm", "run", "lint", "--silent"],
                 capture_output=True,
                 timeout=30,
                 cwd=cwd,
+                env=os.environ.copy(),
             )
             if result.returncode == 0:
                 checks_passed += 1
@@ -207,6 +217,7 @@ def calculate_health(cwd: Optional[str] = None) -> Dict[str, Any]:
                 capture_output=True,
                 timeout=60,
                 cwd=cwd,
+                env=os.environ.copy(),
             )
             if result.returncode == 0:
                 checks_passed += 1

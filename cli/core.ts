@@ -5,7 +5,7 @@
 // file changes every surface at once, and `test/parity.test.ts` fails the build
 // if the two engines ever disagree about what it means.
 
-import { execSync } from 'child_process';
+import { execFileSync } from 'child_process';
 import fs from 'fs';
 import path from 'path';
 
@@ -177,11 +177,20 @@ export function calculateHealth(root: string = process.cwd()): HealthResult {
 
   // 2. Lint check — only inside an npm project: without a local package.json
   // `npm` walks up to a parent directory and lints someone else's repository.
+  // Run the project's own script (side effects by definition) with no shell and
+  // explicit timeouts; it inherits the user's environment because the script may
+  // legitimately depend on it.
   if (!hasPackageJson) {
     issues.push('Lint: no package.json');
   } else {
     try {
-      execSync('npm run lint --silent', { encoding: 'utf-8', timeout: 30000, stdio: 'pipe', cwd });
+      execFileSync('npm', ['run', 'lint', '--silent'], {
+        encoding: 'utf-8',
+        timeout: 30000,
+        stdio: 'pipe',
+        cwd,
+        env: process.env,
+      });
       checksPassed++;
     } catch (e: any) {
       issues.push(e.status !== undefined ? 'Lint: failing' : 'Lint: no lint script or timed out');
@@ -193,7 +202,13 @@ export function calculateHealth(root: string = process.cwd()): HealthResult {
     issues.push('Tests: no package.json');
   } else {
     try {
-      execSync('npm test --silent --run', { encoding: 'utf-8', timeout: 60000, stdio: 'pipe', cwd });
+      execFileSync('npm', ['test', '--silent', '--run'], {
+        encoding: 'utf-8',
+        timeout: 60000,
+        stdio: 'pipe',
+        cwd,
+        env: process.env,
+      });
       checksPassed++;
     } catch (e: any) {
       issues.push(e.status !== undefined ? 'Tests: failing' : 'Tests: no test script or timed out');
@@ -223,9 +238,19 @@ export function calculateHealth(root: string = process.cwd()): HealthResult {
 // ---------------------------------------------------------------------------
 export function getGitDiff(cwd: string = process.cwd()): string {
   try {
-    let diff = execSync('git diff --cached', { encoding: 'utf-8', timeout: 10000, stdio: 'pipe', cwd });
+    let diff = execFileSync('git', ['diff', '--cached'], {
+      encoding: 'utf-8',
+      timeout: 10000,
+      stdio: 'pipe',
+      cwd,
+    });
     if (!diff) {
-      diff = execSync('git diff', { encoding: 'utf-8', timeout: 10000, stdio: 'pipe', cwd });
+      diff = execFileSync('git', ['diff'], {
+        encoding: 'utf-8',
+        timeout: 10000,
+        stdio: 'pipe',
+        cwd,
+      });
     }
     return diff;
   } catch {
