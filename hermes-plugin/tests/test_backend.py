@@ -1,5 +1,6 @@
 """Unit tests for the soloknuckle plugin backend."""
 
+import json
 import os
 import sys
 
@@ -124,13 +125,13 @@ def test_health_returns_structure(monkeypatch, tmp_path):
 
 def test_tool_handlers(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)
-    secrets = __init__._run_secrets({"diff": "+hello"})
+    secrets = json.loads(__init__._run_secrets({"diff": "+hello"}))
     assert secrets["clean"] is True
 
-    intercept = __init__._run_intercept({"command": "ls"})
+    intercept = json.loads(__init__._run_intercept({"command": "ls"}))
     assert intercept["blocked"] is False
 
-    health = __init__._run_health({})
+    health = json.loads(__init__._run_health({}))
     assert "score" in health
 
 
