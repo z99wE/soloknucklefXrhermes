@@ -14,6 +14,7 @@ No hooks. No middleware. Nothing rewrites LLM input or injects context.
 
 from __future__ import annotations
 
+import json
 import logging
 from pathlib import Path
 from typing import Any, Dict
@@ -50,19 +51,19 @@ logger = logging.getLogger(__name__)
 # ---------------------------------------------------------------------------
 # Tool handlers (self-contained, no hermes_plugin_sdk at import time)
 # ---------------------------------------------------------------------------
-def _run_secrets(args: Dict[str, Any]) -> Dict[str, Any]:
-    return scan_secrets(args.get("diff", "") or current_git_diff())
+def _run_secrets(args: Dict[str, Any]) -> str:
+    return json.dumps(scan_secrets(args.get("diff", "") or current_git_diff()))
 
 
-def _run_intercept(args: Dict[str, Any]) -> Dict[str, Any]:
+def _run_intercept(args: Dict[str, Any]) -> str:
     command = args.get("command", "")
     if not command:
-        return {"blocked": False, "reason": "No command provided", "suggestion": None}
-    return intercept_command(command)
+        return json.dumps({"blocked": False, "reason": "No command provided", "suggestion": None})
+    return json.dumps(intercept_command(command))
 
 
-def _run_health(args: Dict[str, Any]) -> Dict[str, Any]:
-    return calculate_health()
+def _run_health(args: Dict[str, Any]) -> str:
+    return json.dumps(calculate_health())
 
 
 # ---------------------------------------------------------------------------
