@@ -1,5 +1,14 @@
 # Soloknuckle
 
+```text
+ ██████  ██████ ███      █████▄    ███  ██▀███   ██▀██    ██ ██████ ██   █████     ███████
+██▀     ██▀  ▄█████    ▄██   ██▄   ▄██▄██  ████▄ ██▄██    ████▄     ██ ███  ██     ██▄
+██████▄ ██    ██▄█▄    ▄█▄   ███   ▄███▄   ▄█▄██▄▄█▄▄█    ██▄█▄     ████    ██     ██████
+     ██ ██    ██▄█▄    ▄██   ███   ▄██▀█▄  ██▄ ▀███ ██    ██▄█▄     ██ ██▄  ██     ██▀
+▄▄▄▄▄█▀ ▀██████ ▀██▄▄▄▄ ██▄▄▄█▀▀   ▄█▄ ▀██▄██▄  ▀██ ▀██████  ██████ ██  ███▄██████▄▀██▄▄▄▄
+█▀▀▀▀▀   █▀▀▀▀█  █▀▀▀▀▀ ▀▀▀▀▀▀     ▀▀   ▀▀ ▀▀    █▀  ▀▀▀▀▀▀  ▀▀▀▀▀▀ ▀▀    ▀▄ █▀▀▀▀  ▀▀▀▀▀█
+```
+
 **Deterministic production hygiene for solo developers** — secret scanning, a command firewall, and a project health gate that run the same way everywhere: in your terminal, in git hooks, in MCP clients, and inside Hermes Agent.
 
 It doesn’t rely on a prompt remembering to be careful. It turns hygiene into **executable, deterministic checks** with one rule set and the same verdict on every surface.
