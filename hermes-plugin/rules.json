@@ -1,0 +1,187 @@
+{
+  "version": 1,
+  "description": "The one rule set behind every Soloknuckle surface. cli/core.ts imports this file directly; hermes-plugin/core.py loads it from disk. Adding a rule here changes the CLI, the MCP server, the git hook, and every Hermes tool at once.",
+  "allow_marker": "soloknuckle:allow",
+  "placeholder_tokens": [
+    "your_key_here",
+    "placeholder",
+    "xxxx",
+    "localhost",
+    "mock",
+    "dummy",
+    "changeme",
+    "<token>"
+  ],
+  "secret_patterns": [
+    {
+      "label": "Stripe live key",
+      "pattern": "sk_live_[0-9a-zA-Z]{24}",
+      "redact": true
+    },
+    {
+      "label": "Stripe restricted key",
+      "pattern": "rk_live_[0-9a-zA-Z]{24}",
+      "redact": true
+    },
+    {
+      "label": "OpenAI/Anthropic-style API key",
+      "pattern": "sk-[a-zA-Z0-9]{32,}",
+      "redact": true
+    },
+    {
+      "label": "OpenAI project API key",
+      "pattern": "sk-proj-[0-9A-Za-z_-]{20,}",
+      "redact": true
+    },
+    {
+      "label": "Anthropic API key",
+      "pattern": "sk-ant-api[0-9]{2}-[0-9A-Za-z_-]{40,}",
+      "redact": true
+    },
+    {
+      "label": "Slack token",
+      "pattern": "xox[baprs]-[a-zA-Z0-9-]+",
+      "redact": true
+    },
+    {
+      "label": "AWS access key",
+      "pattern": "AKIA[0-9A-Z]{16}",
+      "redact": true
+    },
+    {
+      "label": "AWS temporary access key",
+      "pattern": "ASIA[0-9A-Z]{16}",
+      "redact": true
+    },
+    {
+      "label": "GitHub personal access token",
+      "pattern": "ghp_[A-Za-z0-9]{36}",
+      "redact": true
+    },
+    {
+      "label": "GitHub fine-grained PAT",
+      "pattern": "github_pat_[A-Za-z0-9_]{22,}",
+      "redact": true
+    },
+    {
+      "label": "GitHub server-to-server token",
+      "pattern": "ghs_[A-Za-z0-9]{36}",
+      "redact": true
+    },
+    {
+      "label": "GitHub OAuth token",
+      "pattern": "gho_[A-Za-z0-9]{36}",
+      "redact": true
+    },
+    {
+      "label": "npm access token",
+      "pattern": "npm_[A-Za-z0-9]{36}",
+      "redact": true
+    },
+    {
+      "label": "SendGrid API key",
+      "pattern": "SG\\.[A-Za-z0-9_-]{20,}\\.[A-Za-z0-9_-]{40,}",
+      "redact": true
+    },
+    {
+      "label": "GCP API key",
+      "pattern": "AIza[0-9A-Za-z\\-_]{35}",
+      "redact": true
+    },
+    {
+      "label": "GitLab personal access token",
+      "pattern": "\\bglpat-[0-9A-Za-z_-]{20,}",
+      "redact": true,
+      "redact_pattern": "glpat-[0-9A-Za-z_-]{20,}",
+      "note": "The scanner uses a word boundary so xglpat- is not matched; the redactor refuses leading \\b, so it gets the bare prefix."
+    },
+    {
+      "label": "Hugging Face access token",
+      "pattern": "\\bhf_[A-Za-z0-9]{16,}",
+      "redact": true,
+      "redact_pattern": "hf_[A-Za-z0-9]{16,}",
+      "note": "Same word-boundary trade-off as GitLab above."
+    },
+    {
+      "label": "Shopify access token",
+      "pattern": "shpat_[0-9a-fA-F]{32}",
+      "redact": true
+    },
+    {
+      "label": "Private key",
+      "pattern": "-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY",
+      "redact": true
+    },
+    {
+      "label": "Database URI with credentials",
+      "pattern": "(?:postgres|postgresql|mysql|mongodb|mongodb\\+srv|redis|mariadb)://[a-zA-Z0-9_\\-\\.]+:[^@\\s\"']+@[a-zA-Z0-9_\\-\\.]+",
+      "flags": "i",
+      "redact": false,
+      "note": "Scanned but never redacted: Hermes' redactor rejects top-level alternation, so this pattern would be refused."
+    }
+  ],
+  "destructive_patterns": [
+    {
+      "reason": "Piping a remote script to shell",
+      "pattern": "\\b(?:curl|wget)\\b[^|\\n]*\\|\\s*(?:sudo\\s+)?(?:ba|z|k|c|tc|da)?sh\\b",
+      "flags": "i"
+    },
+    {
+      "reason": "Feeding a remote script to a shell via process substitution",
+      "pattern": "\\b(?:ba|z|k|c|tc|da)?sh\\s+<\\(\\s*(?:curl|wget)\\b",
+      "flags": "i"
+    },
+    {
+      "reason": "Recursive delete of a filesystem root or home directory",
+      "pattern": "(?:\\b(?:sudo|doas)\\s+)?\\brm\\s+(?:-[a-zA-Z-]+\\s+)*(?:--no-preserve-root\\s+)*(?:/(?:\\*)?|~\\/?\\*?|\\$\\{?HOME\\}?(?:\\/\\*)?)(?=[\\s;&|#]|$)",
+      "flags": "i"
+    },
+    {
+      "reason": "Raw write to a block device",
+      "pattern": "\\bdd\\b[^\\n]*\\bof=/dev/",
+      "flags": "i"
+    },
+    {
+      "reason": "Filesystem format",
+      "pattern": "\\bmkfs\\b",
+      "flags": "i"
+    },
+    {
+      "reason": "SQL drop",
+      "pattern": "\\bDROP\\s+(?:DATABASE|TABLE|SCHEMA)\\b",
+      "flags": "i"
+    }
+  ],
+  "advisory_patterns": [
+    {
+      "reason": "Recursive force delete",
+      "pattern": "\\brm\\s+-rf\\b",
+      "flags": "i",
+      "suggestion": "Use 'rm -i' or 'trash-put' instead"
+    },
+    {
+      "reason": "Force push",
+      "pattern": "\\bgit\\s+push\\s+(?:--force|-f)\\b",
+      "flags": "i",
+      "suggestion": "Use '--force-with-lease' instead"
+    },
+    {
+      "reason": "Overly permissive chmod",
+      "pattern": "\\bchmod\\s+(?:-R\\s+)?777\\b",
+      "flags": "i",
+      "suggestion": "Use 'chmod 644' or 'chmod u=rwx,go=rx' instead"
+    },
+    {
+      "reason": "Hard reset",
+      "pattern": "\\bgit\\s+reset\\s+--hard\\b",
+      "flags": "i",
+      "suggestion": "Use 'git stash' or 'git reset --soft' instead"
+    },
+    {
+      "reason": "Rewrites published history",
+      "pattern": "\\bgit\\s+commit\\s+--amend\\b",
+      "flags": "i",
+      "suggestion": "Only amend commits that are still local"
+    }
+  ]
+}

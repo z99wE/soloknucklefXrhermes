@@ -2,90 +2,112 @@
 
 CLI, git hooks, MCP, the Hermes tools, and the dashboard all call these
 functions. Deterministic and local: no network, no model, no state.
+
+The rules themselves live in ``rules.json`` next to this file, which is the same
+file ``cli/core.ts`` imports. Both engines therefore read one rule set, and
+``test/parity.test.ts`` fails if they ever stop agreeing.
 """
 
 from __future__ import annotations
 
+import json
 import os
 import re
 import subprocess
-from typing import Any, Dict, List
+from pathlib import Path
+from typing import Any, Dict, List, Optional, Tuple
 
-# ---------------------------------------------------------------------------
-# Secret patterns (credentials only, no PII)
-# ---------------------------------------------------------------------------
-SECRET_PATTERNS = [
-    (re.compile(r"sk_live_[0-9a-zA-Z]{24}"), "Stripe live key"),
-    (re.compile(r"rk_live_[0-9a-zA-Z]{24}"), "Stripe restricted key"),
-    (re.compile(r"sk-[a-zA-Z0-9]{32,}"), "OpenAI/Anthropic-style API key"),
-    (re.compile(r"sk-proj-[0-9A-Za-z_-]{20,}"), "OpenAI project API key"),
-    (re.compile(r"sk-ant-api[0-9]{2}-[0-9A-Za-z_-]{40,}"), "Anthropic API key"),
-    (re.compile(r"xox[baprs]-[a-zA-Z0-9-]+"), "Slack token"),
-    (re.compile(r"AKIA[0-9A-Z]{16}"), "AWS access key"),
-    (re.compile(r"ASIA[0-9A-Z]{16}"), "AWS temporary access key"),
-    (re.compile(r"ghp_[A-Za-z0-9]{36}"), "GitHub personal access token"),
-    (re.compile(r"github_pat_[A-Za-z0-9_]{22,}"), "GitHub fine-grained PAT"),
-    (re.compile(r"ghs_[A-Za-z0-9]{36}"), "GitHub server-to-server token"),
-    (re.compile(r"gho_[A-Za-z0-9]{36}"), "GitHub OAuth token"),
-    (re.compile(r"npm_[A-Za-z0-9]{36}"), "npm access token"),
-    (re.compile(r"SG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{40,}"), "SendGrid API key"),
-    (re.compile(r"AIza[0-9A-Za-z\-_]{35}"), "GCP API key"),
-    (re.compile(r"\bglpat-[0-9A-Za-z_-]{20,}"), "GitLab personal access token"),
-    (re.compile(r"\bhf_[A-Za-z0-9]{16,}"), "Hugging Face access token"),
-    (re.compile(r"shpat_[0-9a-fA-F]{32}"), "Shopify access token"),
-    (re.compile(r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY"), "Private key"),
-    (re.compile(r"(?:postgres|postgresql|mysql|mongodb|mongodb\+srv|redis|mariadb)://[a-zA-Z0-9_\-\.]+:[^@\s\"']+@[a-zA-Z0-9_\-\.]+", re.IGNORECASE), "Database URI with credentials"),
+_RULES_PATH = Path(__file__).resolve().with_name("rules.json")
+
+
+def _load_rules(path: Path = _RULES_PATH) -> Dict[str, Any]:
+    try:
+        with path.open(encoding="utf-8") as handle:
+            data = json.load(handle)
+    except FileNotFoundError as exc:  # pragma: no cover - packaging error
+        raise RuntimeError(
+            f"soloknuckle: rules file missing at {path}. "
+            "Reinstall the plugin; rules.json ships next to core.py."
+        ) from exc
+    for key in ("secret_patterns", "destructive_patterns", "advisory_patterns"):
+        if not isinstance(data.get(key), list):
+            raise RuntimeError(f"soloknuckle: rules.json is missing '{key}'")
+    return data
+
+
+RULES = _load_rules()
+
+
+def _compile(source: str, flags: int = 0) -> "re.Pattern[str]":
+    """Compile a rule, failing loudly instead of silently scanning nothing."""
+    try:
+        return re.compile(source, flags)
+    except re.error as exc:  # pragma: no cover - only on a hand-edited rule file
+        raise RuntimeError(f"soloknuckle: invalid rule pattern {source!r}: {exc}") from exc
+
+
+def _flag_bits(flags: Optional[str]) -> int:
+    bits = 0
+    for flag in flags or "":
+        if flag == "i":
+            bits |= re.IGNORECASE
+        elif flag == "m":
+            bits |= re.MULTILINE
+        elif flag == "s":
+            bits |= re.DOTALL
+    return bits
+
+
+SECRET_PATTERNS: List[Tuple["re.Pattern[str]", str]] = [
+    (_compile(rule["pattern"], _flag_bits(rule.get("flags"))), rule["label"])
+    for rule in RULES["secret_patterns"]
 ]
 
-# The subset Hermes' transcript redactor accepts: it requires at least two
-# literal prefix characters and refuses top-level alternation, so the database
-# URI pattern (a leading group of alternatives) is deliberately excluded.
-REDACTION_PATTERNS = [
-    r"sk_live_[0-9a-zA-Z]{24}",
-    r"rk_live_[0-9a-zA-Z]{24}",
-    r"sk-ant-api[0-9]{2}-[0-9A-Za-z_-]{40,}",
-    r"sk-proj-[0-9A-Za-z_-]{20,}",
-    r"sk-[a-zA-Z0-9]{32,}",
-    r"xox[baprs]-[a-zA-Z0-9-]+",
-    r"AKIA[0-9A-Z]{16}",
-    r"ASIA[0-9A-Z]{16}",
-    r"ghp_[A-Za-z0-9]{36}",
-    r"github_pat_[A-Za-z0-9_]{22,}",
-    r"ghs_[A-Za-z0-9]{36}",
-    r"gho_[A-Za-z0-9]{36}",
-    r"npm_[A-Za-z0-9]{36}",
-    r"SG\.[A-Za-z0-9_-]{20,}\.[A-Za-z0-9_-]{40,}",
-    r"AIza[0-9A-Za-z\-_]{35}",
-    r"glpat-[0-9A-Za-z_-]{20,}",
-    r"hf_[A-Za-z0-9]{16,}",
-    r"shpat_[0-9a-fA-F]{32}",
-    r"-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP |ENCRYPTED )?PRIVATE KEY",
+# The subset Hermes' transcript redactor accepts. It requires at least two
+# literal prefix characters and refuses top-level alternation, which is why a
+# rule can carry a narrower ``redact_pattern``.
+REDACTION_PATTERNS: List[str] = [
+    rule.get("redact_pattern") or rule["pattern"]
+    for rule in RULES["secret_patterns"]
+    if rule.get("redact")
 ]
 
-PLACEHOLDER_WORDS = {"your_key_here", "placeholder", "xxxx", "localhost", "mock", "dummy", "changeme", "<token>"}
+PLACEHOLDER_TOKENS = tuple(token.lower() for token in RULES["placeholder_tokens"])
+ALLOW_MARKER = RULES["allow_marker"].lower()
 
 
-def _is_placeholder(line: str) -> bool:
-    lower = line.lower()
-    return any(w in lower for w in PLACEHOLDER_WORDS)
+def is_placeholder_match(match: str) -> bool:
+    """True only when the *matched text* looks like a placeholder.
+
+    Testing the whole line (the old behaviour) silently skipped a real key that
+    merely sat on a line mentioning "mock" or "localhost".
+    """
+    lower = match.lower()
+    return any(token in lower for token in PLACEHOLDER_TOKENS)
 
 
 def scan_secrets(diff: str) -> Dict[str, Any]:
     """Scan a git diff for secrets. Returns {clean, violations}."""
     violations: List[str] = []
     for i, line in enumerate(diff.split("\n"), 1):
+        # Only additions can introduce a secret; skip headers and removals.
         if not line.startswith("+") or line.startswith("+++"):
             continue
+        # Explicit, greppable escape hatch for fixtures and documentation.
+        if ALLOW_MARKER in line.lower():
+            continue
         for pattern, label in SECRET_PATTERNS:
-            if pattern.search(line):
-                if _is_placeholder(line):
-                    continue
-                violations.append(f"Line {i}: {label} detected.")
-                break
+            match = pattern.search(line)
+            if match is None:
+                continue
+            if is_placeholder_match(match.group(0)):
+                continue
+            violations.append(f"Line {i}: {label} detected.")
+            break
     return {"clean": len(violations) == 0, "violations": violations}
 
 
-def current_git_diff(cwd: str | None = None) -> str:
+def current_git_diff(cwd: Optional[str] = None) -> str:
     """Staged diff if there is one, else unstaged. Empty string outside a repo."""
     for argv in (["git", "diff", "--cached"], ["git", "diff"]):
         try:
@@ -100,23 +122,25 @@ def current_git_diff(cwd: str | None = None) -> str:
 
 
 # ---------------------------------------------------------------------------
-# Destructive command patterns
+# Command firewall
 # ---------------------------------------------------------------------------
-DESTRUCTIVE_PATTERNS = [
-    (re.compile(r"curl\s+.*\|\s*(?:ba|z|k|c|tc)?sh", re.IGNORECASE), "Piping remote script to shell"),
-    (re.compile(r"wget\s+.*\|\s*(?:ba|z|k|c|tc)?sh", re.IGNORECASE), "Piping remote script to shell"),
-    (re.compile(r"\brm\s+-rf\s+/\s*$", re.IGNORECASE), "Recursive delete of root"),
-    (re.compile(r"\bdd\s+if=.*of=/dev/", re.IGNORECASE), "Raw disk write"),
-    (re.compile(r"\bmkfs\b", re.IGNORECASE), "Filesystem format"),
-    (re.compile(r"\bDROP\s+(?:DATABASE|TABLE|SCHEMA)\b", re.IGNORECASE), "SQL drop"),
+DESTRUCTIVE_PATTERNS: List[Tuple["re.Pattern[str]", str]] = [
+    (_compile(rule["pattern"], _flag_bits(rule.get("flags"))), rule["reason"])
+    for rule in RULES["destructive_patterns"]
 ]
 
-SUGGEST_PATTERNS = [
-    (re.compile(r"\brm\s+-rf\b", re.IGNORECASE), "Recursive force delete", "Use 'rm -i' or 'trash-put' instead"),
-    (re.compile(r"\bgit\s+push\s+(?:--force|-f)\b", re.IGNORECASE), "Force push", "Use '--force-with-lease' instead"),
-    (re.compile(r"\bchmod\s+(?:-R\s+)?777\b", re.IGNORECASE), "Overly permissive chmod", "Use 'chmod 644' or 'chmod u=rwx,go=rx' instead"),
-    (re.compile(r"\bgit\s+reset\s+--hard\b", re.IGNORECASE), "Hard reset", "Use 'git stash' or 'git reset --soft' instead"),
+ADVISORY_PATTERNS: List[Tuple["re.Pattern[str]", str, str]] = [
+    (
+        _compile(rule["pattern"], _flag_bits(rule.get("flags"))),
+        rule["reason"],
+        rule.get("suggestion") or "",
+    )
+    for rule in RULES["advisory_patterns"]
 ]
+
+# Kept as an alias so existing callers and tests keep one name for the advisory
+# tier.
+SUGGEST_PATTERNS = ADVISORY_PATTERNS
 
 
 def intercept_command(command: str) -> Dict[str, Any]:
@@ -125,9 +149,9 @@ def intercept_command(command: str) -> Dict[str, Any]:
         if pattern.search(command):
             return {"blocked": True, "reason": reason, "suggestion": None}
 
-    for pattern, reason, suggestion in SUGGEST_PATTERNS:
+    for pattern, reason, suggestion in ADVISORY_PATTERNS:
         if pattern.search(command):
-            return {"blocked": False, "reason": reason, "suggestion": suggestion}
+            return {"blocked": False, "reason": reason, "suggestion": suggestion or None}
 
     return {"blocked": False, "reason": None, "suggestion": None}
 
@@ -135,7 +159,7 @@ def intercept_command(command: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
-def calculate_health(cwd: str | None = None) -> Dict[str, Any]:
+def calculate_health(cwd: Optional[str] = None) -> Dict[str, Any]:
     """Run basic health checks. Returns {score, grade, issues}.
 
     Every npm invocation is guarded by a local ``package.json``: without it,
