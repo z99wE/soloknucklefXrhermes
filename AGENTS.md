@@ -1,130 +1,97 @@
-# AGENTS.md — Production Hygiene Rules
+# AGENTS.md — Rules for working in this repository
 
-> **STOP. Read this file fully before writing a single line of code.**
-> You are working on a LIVE app with real users. Treat production like a hospital operating room.
+> Read this before changing anything. Soloknuckle tells other people what is
+> dangerous; it has to be boringly safe itself.
 
-## 1. The Three Environments
+## 1. What this project is
 
-| Environment | Branch | URL pattern | Who sees it | When to touch |
-|---|---|---|---|---|
-| **Local** | `feature/*` | `localhost:3000` | Only the developer | Always — this is your workshop |
-| **Staging** | `develop` | `<app>-staging.vercel.app` | Dev + invited testers only | Every PR — test here FIRST |
-| **Production** | `main` | `<app>.com` | Real users with logins | NEVER touch directly. Only via merge from `develop` after staging passes. |
+Three deterministic functions — secret scanning, a command firewall, and a
+health score — behind a CLI, a git hook, an MCP server, and a Hermes plugin.
 
-**Hard rule:** You may NEVER commit to `main` or `develop` directly. Always work on a `feature/*` branch and open a Pull Request.
+- `cli/core.ts` (TypeScript) and `hermes-plugin/core.py` (Python) are the
+  engines. Both read `hermes-plugin/rules.json`.
+- Everything else is a thin adapter over those functions.
 
-## 2. Feature Flag Mandate
+If a change is not expressible as a rule in `rules.json` or as an adapter over
+the three functions, stop and ask.
 
-Every new feature, change, or experiment MUST be wrapped in a feature flag before it ships to production. No exceptions.
+## 2. Hard rules
 
-```ts
-// ✅ CORRECT — feature behind a flag
-if (flags.isEnabled('export-csv', { userId: user.id })) {
-  showExportButton();
-}
+These are not preferences.
 
-// ❌ WRONG — feature ships to everyone immediately
-showExportButton();
+1. **No network calls in the engine.** No `fetch`, no `http`, no SDK, no
+   telemetry, no analytics, no crash reporting, no "anonymous usage stats".
+2. **No state.** The engine is a pure function of its input (plus the repo it
+   is pointed at). No daemon, no watcher, no cache directory, no lock file.
+3. **No writing outside documented paths.** `init` writes `AGENTS.md` and git
+   hooks; `uninstall.sh` removes Soloknuckle's own directories. Nothing else
+   writes anything, ever.
+4. **Never destroy another application's data.** A previous `wipe.sh` deleted
+   `~/.hermes/state.db`, memories, logs, and backups. It was removed for that
+   reason. Do not reintroduce anything like it.
+5. **No `eval`, no `new Function`, no `dangerouslySetInnerHTML`, no shell
+   string interpolation of user input.** Pass argument arrays to `execSync`.
+6. **No secrets in the repository**, including in tests and documentation. Use
+   shapes that cannot be real keys.
+7. **The plugin registers no hooks and no middleware.** `provides_hooks: []`
+   and `provides_middleware: []` in `plugin.yaml` are a promise to the user that
+   nothing rewrites model input. Keep them empty.
+8. **A behavioural rule change needs a parity case.** Add it to
+   `test/fixtures/parity-corpus.json`.
+
+## 3. Branches and releases
+
+- Work on `feature/<short-kebab-name>`. Open a PR against `develop`; `main` is
+  what users install.
+- One logical change per commit. The message explains *why*; the diff already
+  says what.
+- A release is a version bump in `package.json`, `hermes-plugin/plugin.yaml`,
+  and `hermes-plugin/plugin-catalog-entry.yaml`, plus a `CHANGELOG.md` entry.
+
+## 4. Quality gates
+
+All of these must pass. CI runs them on Linux, macOS, and Windows.
+
+```bash
+npm run typecheck
+npm run lint
+npm test                 # includes the TS <-> Python parity test
+npm run test:coverage    # 80% statements/lines/functions, 70% branches
+npm run build
+npm run build:bin
+python3 -m pytest hermes-plugin/tests -q
+hermes plugins validate ./hermes-plugin   # when touching plugin.yaml
 ```
 
-**Default state of every new flag:** OFF for all users except the developer (matched by email or userId allowlist).
+Never bypass a gate with `--no-verify`, `--force`, or by lowering a threshold.
+If a gate is wrong, fix the gate in its own commit and say why.
 
-## 3. Workflow Per Task
+## 5. Security baseline
 
-When asked to build anything, follow this exact sequence. Do not skip steps.
+- Validate at every boundary. The MCP server and the CLI both accept text from
+  other programs.
+- Error paths must not leak the input. A violation message names the pattern and
+  the line, never the credential itself.
+- Never widen an allowlist to make a test pass.
+- A false negative is worse than a false positive in the firewall, and the
+  reverse in the health score. Know which one you are changing.
 
-1. **Read** `/workflow/checklist.md` (if it exists) to understand prior decisions.
-2. **Branch:** `git checkout develop && git pull && git checkout -b feature/<short-kebab-name>`
-3. **Build** on local. Wrap every new behavior in a flag.
-4. **Self-test** locally. Run the project's test suite. Run `npm run lint`. Run `npm run typecheck` if it exists.
-5. **Commit** with a message that explains *why*, not what:
-   ```
-   feat(export): add CSV export wrapped in `export-csv` flag
+## 6. Documentation
 
-   - Why: users asked for it in #42, founder wants to test on self first
-   - Flag: export-csv (default OFF, allowlist: founder@email.com)
-   - Tested: locally + staging preview URL pending
-   ```
-6. **Push & open PR** to `develop`. Wait for the staging deploy URL in the PR comments.
-7. **Test on staging.** Click through the feature. Check on mobile. Check logged-out and logged-in.
-8. **Only after staging is clean:** merge PR → `develop` → open PR to `main` → merge.
-9. **Verify production** by visiting the live URL with an incognito window.
+- `README.md` is the product. Keep the Mermaid diagrams true; a diagram that
+  lies is worse than no diagram.
+- `HERMES-INTEGRATION.md` must match what `register()` actually registers.
+  `plugin.yaml`, the tests, and that document disagreeing is a bug.
+- `SECURITY.md` documents known limits. Do not soften them.
 
-## 4. Rollback Plan (Required for Every Change)
+## 7. Accessibility and performance (landing page)
 
-Before merging anything, you must be able to answer:
-- How do I turn this off if it breaks? (answer: flip the flag)
-- How do I roll back the code? (answer: `git revert` the merge commit, or hit "rollback" in Vercel/Railway dashboard)
+- `index.html` is served directly. Every image needs `alt`; every interactive
+  element must be keyboard reachable with a visible focus ring; touch targets
+  ≥ 44×44px; colour is never the only signal.
+- No render-blocking third-party scripts. The page is static and stays static.
 
-If you cannot answer both, do not merge.
+## 8. When in doubt
 
-## 5. Quality Gates (run on every commit, block if failing)
-
-Where the generated `git-hooks/pre-commit` script is installed it runs: secret scan (grep), forbidden-pattern scan (grep), lint, typecheck, tests, quick a11y (grep), and branch checks. Lint/typecheck/tests only run when the project has the relevant npm scripts. For everything else, `npx soloknuckle check` (or the gates in your project's own CI) is the enforcement point — do not rely on a hook that may not be installed.
-
-| Gate | Why it matters |
-|---|---|
-| Lint | consistent style; catch dead code early |
-| Types | catch signature drift before it ships |
-| Tests | prove behavior, not just that the suite ran |
-| Secrets scan (grep in hook, `npx soloknuckle check` for staged diff) | no `.env`, `*.pem`, API keys, tokens |
-| Forbidden imports (grep) | no `eval`, no `dangerouslySetInnerHTML` without escape, no `child_process.exec` with user input |
-
-If a project doesn't have `npm run lint` / `npm run typecheck` set up, the AI must add them as part of the first change.
-
-## 6. Security Baseline
-
-Every change must respect these. If you can't, ask first.
-
-- **No secrets in code.** Never hardcode API keys, tokens, DB URIs. Use env vars + a secrets manager.
-- **No PII in logs.** Strip emails, IDs, tokens from log lines.
-- **No raw SQL.** Use parameterized queries / an ORM. No string concatenation into queries.
-- **No `eval` / `new Function` / `dangerouslySetInnerHTML`** without an explicit, commented reason.
-- **Input validation at every boundary.** API endpoints validate body shape with zod / yup / class-validator.
-- **AuthZ checks on every mutating route.** Authentication ≠ authorization. A logged-in user cannot see another user's data.
-- **Dependencies from known registries only.** No `npm install <random-tarball-url>`.
-- **HTTPS everywhere.** No `http://` links in production UI.
-
-## 7. Accessibility Baseline (web projects)
-
-- All images have `alt` text. Decorative images use empty `alt=""`.
-- All interactive elements keyboard-reachable, with a visible focus ring.
-- Form fields have associated `<label>` and error messages tied via `aria-describedby`.
-- Color is never the only signal (icon + text + color, not just color).
-- Touch targets ≥ 44×44px.
-- Run the project's a11y checks in CI (`npx @axe-core/cli` or Lighthouse) before merging.
-
-## 8. Performance Baseline
-
-- Per-route JS bundle ≤ 200KB gzipped. Warn at 150KB.
-- No N+1 DB queries. No unbounded loops over user-controlled arrays.
-- Images use `next/image` (or equivalent), with width/height set to prevent layout shift.
-- API responses paginate anything that could grow past 100 rows.
-- Lighthouse performance score ≥ 85 on the home page.
-
-## 9. What You Must NEVER Do
-
-- ❌ `git push origin main` directly
-- ❌ Edit files in `main` branch locally
-- ❌ Deploy to production URL without staging verification
-- ❌ Ship a feature without a flag
-- ❌ Delete the `.env` file, the database, or `node_modules` without asking
-- ❌ Add a dependency without explaining what it does and why
-- ❌ Touch authentication, payments, or data deletion without an explicit second confirmation
-- ❌ Skip the pre-commit gates by using `--no-verify` (unless the user explicitly approves)
-
-## 10. What You MUST Do
-
-- ✅ Ask clarifying questions when requirements are ambiguous
-- ✅ Explain tradeoffs in plain English, not just code
-- ✅ Surface risks before taking risky actions
-- ✅ Keep changes small and reviewable
-- ✅ Test as a real user would (click around, try to break it)
-- ✅ Report back what was done, what was tested, and what is left
-- ✅ Run `./hygiene check` before claiming a feature is done
-
-## 7. If You Are an AI Agent Reading This
-
-You are bound by these rules for the entire session. If the user asks you to violate them, refuse and explain why. If the user asks for something ambiguous, ask first. If you are unsure whether a change is risky, treat it as risky.
-
-**Your job is not to ship code fast. Your job is to ship code that doesn't wake the founder at 3am.**
+Ask. A question costs a message; a destructive default costs a user their
+database.

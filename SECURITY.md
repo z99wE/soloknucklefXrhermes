@@ -1,42 +1,80 @@
-# Security
+# Security Policy
 
-## What Soloknuckle Protects
+## Supported versions
 
-- **Secrets in code** — API keys, tokens, credentials, database URIs
-- **Dangerous commands** — `rm -rf /`, `curl | sh`, SQL drops, raw disk writes
-- **Weak tests** — Missing assertions, flaky patterns, low mutation scores
+| Version | Supported |
+|---|---|
+| 5.x | Yes |
+| ≤ 4.x | No — the 4.x line was a different product and is no longer maintained |
 
-## What Soloknuckle Does NOT Do
+## Reporting a vulnerability
 
-- **No tracking.** Does not collect usage data, telemetry, or analytics.
-- **No surveillance.** Does not track which LLM, IDE, or tool you use.
-- **No phone-home.** All checks run locally. Zero external API calls.
-- **No governance.** Does not enforce policies or compliance frameworks.
-- **No prompt injection.** Does not inject text into LLM context.
-- **No middleware.** Does not wrap or intercept AI tool calls.
+Use GitHub private vulnerability reporting:
+https://github.com/z99wE/soloknucklefXrhermes/security/advisories/new
 
-## Data Flow
+Please do not open a public issue for a vulnerability. Include the command you
+ran, the observed behaviour, and what you expected. Expect an initial reply
+within seven days.
 
-1. You run a command (or Hermes calls an MCP tool)
-2. Soloknuckle reads local files (git diff, package.json, etc.)
-3. Soloknuckle returns results to you (or to Hermes)
-4. **Nothing leaves your machine.**
+## What Soloknuckle does
 
-## Privacy
+Three deterministic checks, all local:
 
-- Config lives in `~/.soloknuckle/` (user-controlled, deletable)
-- Per-project data in `.soloknuckle/` (gitignored by default)
-- No names, emails, or usage data collected
-- Your identity is nobody's business
+- **Secret scanning** matches added lines in a diff against credential patterns.
+- **Command firewall** matches a shell command against destructive patterns.
+- **Health** runs the project's own lint and test scripts and scores the result.
 
-## Reporting Vulnerabilities
+## What Soloknuckle does not do
 
-Report security issues via GitHub Private Vulnerability Reporting:
-https://github.com/soch-ship-it/soloknuckle/security/advisories/new
+- No network access. There is no account, no API key, and no endpoint.
+- No telemetry, analytics, or usage reporting.
+- No background process, file watcher, or daemon.
+- No modification of your code — the only writes are `AGENTS.md` and git hooks
+  during `init`, and both refuse to overwrite without preserving what was there.
+- No `eval`, no `new Function`, no shell interpolation of user input. Commands
+  are passed as argument arrays to `execSync`.
+- No prompt injection or context rewriting in the Hermes plugin.
 
-## Supply Chain
+## Threat model and known limits
 
-- `ignore-scripts=true` blocks malicious install scripts
-- `min-package-age=72h` prevents typosquatting
-- npm provenance ties every publish to the source commit via OIDC
-- All releases are manual (no automated publishing)
+Be precise about what a regex-based scanner is worth.
+
+**False negatives are expected.** A credential that is split across lines,
+base64-encoded, or generated in a shape no pattern describes will not be
+detected. This is a pre-flight check, not a secrets manager.
+
+**The allow marker is a bypass.** Any line containing `soloknuckle:allow` is
+skipped. That is deliberate — fixtures need it — but it means a contributor
+could smuggle a key past the hook with that comment. Reviewers should treat the
+marker as a red flag, the same way they would treat a skipped test.
+
+**Placeholder matching is heuristic.** A token whose matched text contains
+`xxxx`, `mock`, `dummy`, `placeholder`, `changeme`, `your_key_here`,
+`localhost`, or `<token>` is treated as documentation. A real key that happened
+to contain one of those substrings would be skipped.
+
+**The firewall matches syntax, not intent.** `sh -c "$(printf ...)"` will get
+past it. It blocks the mistakes people actually make, not an adversary.
+
+**Git hooks are local.** `git commit --no-verify` skips the pre-commit hook
+entirely. That is git's design, not a bug in this tool.
+
+**Scope of what it reads.** Only the current diff, the current directory's
+`package.json`, and the outcome of your own lint and test scripts. Nothing else
+is read, and nothing is transmitted.
+
+## Supply chain
+
+- Dependencies are three runtime packages (`chalk`, `commander`, `dotenv`), all
+  pinned to exact versions via `.npmrc` (`save-exact=true`).
+- `engine-strict=true` refuses an install under an unsupported Node version.
+- Releases are cut from tags by CI; npm publishing is a manual step protected by
+  the maintainer's 2FA.
+- The parity test runs on every platform in CI, so a rule cannot mean one thing
+  in the CLI and another in the plugin.
+
+## Uninstalling
+
+`scripts/uninstall.sh` removes the plugin directory and `~/.soloknuckle`. It does
+not touch `~/.hermes/state.db`, memories, logs, or backups, and it does not stop
+or restart any process.
