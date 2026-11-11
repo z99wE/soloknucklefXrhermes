@@ -13,7 +13,7 @@ name: soloknuckle
 title: Soloknuckle
 repo: https://github.com/z99wE/soloknucklefXrhermes
 sha: ""
-version: "5.1.0"
+version: "5.2.0"
 description: >-
   Production hygiene before code ships. Three tools — git-diff secret scanning,
   a destructive-command firewall, and a project health score — plus native

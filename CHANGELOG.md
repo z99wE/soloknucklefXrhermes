@@ -4,6 +4,52 @@ All notable changes to Soloknuckle will be documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/), and this project adheres to [Semantic Versioning](https://semver.org/).
 
+## [5.2.0] - 2026-11-11
+
+### Added
+
+- **One declarative rule set.** `hermes-plugin/rules.json` now drives both engines: `cli/core.ts` imports it and `hermes-plugin/core.py` loads it. Adding a pattern reaches the CLI, the MCP server, the git hooks, the Hermes tools, `/hygiene`, and the transcript redactor at once.
+- **Cross-language parity test.** `test/parity.test.ts` runs a shared corpus through the TypeScript and Python engines and fails on the first disagreement about a violation, a `blocked` verdict, or a redaction pattern.
+- **`soloknuckle check --min-score N`** (default 70). `check` now exits non-zero below the gate, so it can run in CI.
+- **`soloknuckle:allow`** marker: an explicit, greppable way to exempt a fixture line.
+- **Caution tier** for `git commit --amend`.
+
+### Fixed
+
+- **`soloknuckle` could not run after a global or npx install** — the bin was emitted without a shebang, so it failed with "exec format error". `soloknuckle-mcp` was unaffected, which is why the CLI looked installed and then did nothing.
+- **`intercept` rejected the command it was given.** `soloknuckle intercept rm -rf /` failed with "unknown option '-rf'" unless the caller quoted the whole command.
+- **`init` overwrote existing git hooks.** It now preserves `pre-commit`/`pre-push` as `<hook>.local` and chains them, and is idempotent on re-run.
+- **`scripts/wipe.sh` destroyed Hermes' data.** It killed every Hermes process and deleted `~/.hermes/state.db`, `memories/`, `logs/`, and `backups/`. Replaced by `scripts/uninstall.sh`, which removes only Soloknuckle's own directories.
+- **Placeholder bypass.** A real key was skipped whenever its line happened to mention "mock", "dummy" or "localhost". Only a match that is itself a placeholder is skipped now.
+- **Firewall gaps.** `sudo rm -rf /`, `rm -rf ~`, `rm -rf /*`, `rm -rf --no-preserve-root /`, and `bash <(curl …)` are now blocked.
+- **Release artifacts were mislabelled.** Five "platform" tarballs were one portable JS bundle copied five times. One `soloknuckle.tar.gz` replaces them, and `install.sh` requires Node 20+ and no longer edits shell rc files.
+
+### Changed
+
+- MCP transport is now `serve(input, output, onEnd)` instead of reading process globals, so the request pipeline is testable and embeddable.
+- `cli/path-utils.ts` is now `cli/version.ts`; the unused `findFiles` glob helper is gone.
+- CLI output no longer contains emoji.
+- Removed `express`, `inquirer`, `supertest`, and `@types/express` (unused).
+- Removed the v4 documentation layer: feature-flag templates and schemas, `ROLLOUT.md`, `SKILL.md` (root), `META-PROMPT.md`, `AUDIT-PLAN.md`, `BUG-REPORT.md`, `PRD-TRD-v5.md`, and the host setup scripts.
+
+## [5.1.0] - 2026-11-04
+
+### Added
+
+- **Hermes plugin.** Three tools (`soloknuckle.secrets`, `soloknuckle.intercept`, `soloknuckle.health`) plus native surfaces: seven credential redaction patterns for the transcript redactor, the `soloknuckle:hygiene` skill, `hermes hygiene` CLI, `/hygiene` slash command, and a weekly hygiene report blueprint.
+- **MCP server** (`soloknuckle-mcp`) exposing the same three tools over stdio.
+
+## [5.0.0] - 2026-10-31
+
+### Changed
+
+- **Rebuilt around one engine.** The 13-dimension scorer, telemetry, webhook daemon, governance framework, compliance audits, feature flags, and AI watcher were removed. What remains is three deterministic functions — `scanSecrets`, `interceptCommand`, `calculateHealth` — reached from four CLI commands, three MCP tools, and git hooks.
+- The engine makes no network calls and holds no state.
+
+### Removed
+
+- Everything that required an account, a server, or a background process.
+
 ## [1.3.1] - 2026-10-30
 
 ### Fixed

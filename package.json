@@ -1,6 +1,6 @@
 {
   "name": "soloknuckle",
-  "version": "5.1.0",
+  "version": "5.2.0",
   "description": "Production hygiene for solo developers: secret scanning, a command firewall, and a health score. Local-first, no telemetry.",
   "engines": {
     "node": ">=20"

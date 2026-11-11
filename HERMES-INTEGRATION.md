@@ -20,6 +20,9 @@ surface below is a thin adapter over the same three functions:
 - `intercept_command(command)`
 - `calculate_health()`
 
+Those three functions read `hermes-plugin/rules.json`, the same file the
+TypeScript engine imports. One rule change, every surface.
+
 ---
 
 ## Surfaces
@@ -131,13 +134,22 @@ submissions of third-party repos are declined.
 
 ---
 
-## Known trade-off: two engines
+## Two engines, one rule set
 
 The TypeScript CLI (`cli/core.ts`) and the Python plugin
-(`hermes-plugin/core.py`) share a pattern list by convention, not by
-generation. They are duplicated on purpose: the plugin must stay
-self-contained so `hermes plugins install` never shells out to `npx`.
+(`hermes-plugin/core.py`) are two implementations on purpose: the plugin must
+stay self-contained so `hermes plugins install` never shells out to `npx`, and
+the CLI must not require a Python interpreter.
 
-If the lists drift, the plugin is the one that is wrong — it ships to users who
-do not have Node installed. A parity test comparing both lists is the obvious
-next step.
+They are not two *products*. Both load `hermes-plugin/rules.json` — the
+TypeScript side imports it, the Python side reads it next to `core.py` — so a
+pattern is defined exactly once and reaches every surface together.
+
+What data sharing cannot guarantee is behavioural equivalence: JavaScript and
+Python differ at the edges of `\b`, of `$`, and of Unicode case folding. So
+`test/parity.test.ts` runs a shared corpus (`test/fixtures/parity-corpus.json`)
+through both engines and fails on the first disagreement, comparing the
+violation strings, the `blocked`/`reason`/`suggestion` triple, and the derived
+redaction list. `npm test` therefore requires a Python interpreter; set
+`SOLOKNUCKLE_PYTHON` if it is not on `PATH`.
+
