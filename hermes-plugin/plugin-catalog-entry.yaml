@@ -1,0 +1,39 @@
+# Submission entry for the Hermes plugin catalog.
+#
+# Place this file at `plugin-catalog/soloknuckle.yaml` in a PR to the
+# hermes-agent repository. Fill `sha` with the full 40-character commit that
+# should be reviewed:
+#
+#     git rev-parse HEAD
+#
+# Admission is a human-merged gate: owner or major-contributor submissions only,
+# exact SHA pins, no self-updating code, and `capabilities` must match what
+# register() actually does at the pinned commit.
+name: soloknuckle
+title: Soloknuckle
+repo: https://github.com/z99wE/soloknucklefXrhermes
+sha: ""
+version: "5.1.0"
+description: >-
+  Production hygiene before code ships. Three tools — git-diff secret scanning,
+  a destructive-command firewall, and a project health score — plus native
+  Hermes surfaces: 19 additive credential-redaction patterns, a
+  soloknuckle:hygiene skill, a `hermes hygiene` CLI, a /hygiene in-session
+  command, and a weekly hygiene-report automation blueprint. Fully local: no
+  network calls, no telemetry, no LLM involvement, and no hooks or middleware.
+  The engine is deterministic and read-only.
+maintainer: Soloknuckle Contributors
+tier: community
+category: tools
+docs_url: https://github.com/z99wE/soloknucklefXrhermes/blob/main/HERMES-INTEGRATION.md
+requires_hermes: ">=0.22.0"
+readme: true
+platforms: []
+capabilities:
+  provides_tools:
+    - soloknuckle.secrets
+    - soloknuckle.intercept
+    - soloknuckle.health
+  provides_hooks: []
+  provides_middleware: []
+  requires_env: []

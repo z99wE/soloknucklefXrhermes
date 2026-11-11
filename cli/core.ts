@@ -114,51 +114,48 @@ export function interceptCommand(command: string): InterceptResult {
 // ---------------------------------------------------------------------------
 // calculateHealth
 // ---------------------------------------------------------------------------
-export function calculateHealth(): HealthResult {
+export function calculateHealth(root: string = process.cwd()): HealthResult {
   const issues: string[] = [];
   let checksPassed = 0;
   const totalChecks = 4;
+  const cwd = root;
+  const hasPackageJson = fs.existsSync(path.join(cwd, 'package.json'));
 
-  // 1. Lint check
-  try {
-    const result = execSync('npm run lint --silent', { encoding: 'utf-8', timeout: 30000, stdio: 'pipe' });
+  // 1. Dependency check
+  if (hasPackageJson) {
     checksPassed++;
-  } catch (e: any) {
-    if (e.status !== undefined) {
-      issues.push('Lint: failing');
-    } else {
-      issues.push('Lint: no lint script or timed out');
-    }
+  } else {
+    issues.push('Dependencies: no package.json');
   }
 
-  // 2. Test check
-  try {
-    const result = execSync('npm test --silent --run', { encoding: 'utf-8', timeout: 60000, stdio: 'pipe' });
-    checksPassed++;
-  } catch (e: any) {
-    if (e.status !== undefined) {
-      issues.push('Tests: failing');
-    } else {
-      issues.push('Tests: no test script or timed out');
-    }
-  }
-
-  // 3. Secrets check
-  try {
-    let diff = '';
+  // 2. Lint check — only inside an npm project: without a local package.json
+  // `npm` walks up to a parent directory and lints someone else's repository.
+  if (!hasPackageJson) {
+    issues.push('Lint: no package.json');
+  } else {
     try {
-      diff = execSync('git diff --cached', { encoding: 'utf-8', timeout: 10000, stdio: 'pipe' });
-    } catch {
-      // ignore
+      execSync('npm run lint --silent', { encoding: 'utf-8', timeout: 30000, stdio: 'pipe', cwd });
+      checksPassed++;
+    } catch (e: any) {
+      issues.push(e.status !== undefined ? 'Lint: failing' : 'Lint: no lint script or timed out');
     }
-    if (!diff) {
-      try {
-        diff = execSync('git diff', { encoding: 'utf-8', timeout: 10000, stdio: 'pipe' });
-      } catch {
-        // ignore
-      }
+  }
+
+  // 3. Test check
+  if (!hasPackageJson) {
+    issues.push('Tests: no package.json');
+  } else {
+    try {
+      execSync('npm test --silent --run', { encoding: 'utf-8', timeout: 60000, stdio: 'pipe', cwd });
+      checksPassed++;
+    } catch (e: any) {
+      issues.push(e.status !== undefined ? 'Tests: failing' : 'Tests: no test script or timed out');
     }
-    const result = scanSecrets(diff);
+  }
+
+  // 4. Secrets check
+  try {
+    const result = scanSecrets(getGitDiff(cwd));
     if (result.clean) {
       checksPassed++;
     } else {
@@ -166,17 +163,6 @@ export function calculateHealth(): HealthResult {
     }
   } catch {
     issues.push('Secrets: not a git repo');
-  }
-
-  // 4. Dependency check
-  try {
-    if (fs.existsSync(path.join(process.cwd(), 'package.json'))) {
-      checksPassed++;
-    } else {
-      issues.push('Dependencies: no package.json');
-    }
-  } catch {
-    issues.push('Dependencies: check failed');
   }
 
   const score = Math.round((checksPassed / totalChecks) * 100);
@@ -188,11 +174,11 @@ export function calculateHealth(): HealthResult {
 // ---------------------------------------------------------------------------
 // Git diff helper
 // ---------------------------------------------------------------------------
-export function getGitDiff(): string {
+export function getGitDiff(cwd: string = process.cwd()): string {
   try {
-    let diff = execSync('git diff --cached', { encoding: 'utf-8', timeout: 10000, stdio: 'pipe' });
+    let diff = execSync('git diff --cached', { encoding: 'utf-8', timeout: 10000, stdio: 'pipe', cwd });
     if (!diff) {
-      diff = execSync('git diff', { encoding: 'utf-8', timeout: 10000, stdio: 'pipe' });
+      diff = execSync('git diff', { encoding: 'utf-8', timeout: 10000, stdio: 'pipe', cwd });
     }
     return diff;
   } catch {

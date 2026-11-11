@@ -1,4 +1,7 @@
 import { describe, it, expect } from 'vitest';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
 import { scanSecrets, interceptCommand, calculateHealth } from '../cli/core';
 
 describe('scanSecrets', () => {
@@ -72,11 +75,17 @@ describe('interceptCommand', () => {
 
 describe('calculateHealth', () => {
   it('returns score, grade, and issues', () => {
-    const result = calculateHealth();
-    expect(typeof result.score).toBe('number');
-    expect(typeof result.grade).toBe('string');
-    expect(Array.isArray(result.issues)).toBe(true);
-    expect(result.score).toBeGreaterThanOrEqual(0);
-    expect(result.score).toBeLessThanOrEqual(100);
-  }, 120000);
+    const tmp = fs.mkdtempSync(path.join(os.tmpdir(), 'solo-health-'));
+    try {
+      const result = calculateHealth(tmp);
+      expect(typeof result.score).toBe('number');
+      expect(typeof result.grade).toBe('string');
+      expect(Array.isArray(result.issues)).toBe(true);
+      expect(result.issues).toContain('Dependencies: no package.json');
+      expect(result.score).toBeGreaterThanOrEqual(0);
+      expect(result.score).toBeLessThanOrEqual(100);
+    } finally {
+      fs.rmSync(tmp, { recursive: true, force: true });
+    }
+  }, 20000);
 });

@@ -63,21 +63,41 @@ Issues:
 
 ## Hermes Agent Integration
 
-Soloknuckle integrates with Hermes Agent via MCP. Three tools are available:
+Soloknuckle is a native Hermes plugin. It registers three tools and four
+host surfaces — all declared in `plugin.yaml` and visible in
+`hermes plugins capabilities`.
+
+**Tools**
 
 | Tool | Description |
 |------|-------------|
-| `soloknuckle.secrets` | Scan git diff for API keys, tokens, credentials |
-| `soloknuckle.intercept` | Evaluate shell command safety |
+| `soloknuckle.secrets` | Scan a git diff for API keys, tokens, and credentials |
+| `soloknuckle.intercept` | Evaluate a shell command before it runs |
 | `soloknuckle.health` | Project health score (0-100) with issues |
 
-All tools return structured JSON. No middleware. No hooks. No prompt injection.
+**Host surfaces**
+
+| Surface | What it does |
+|---------|--------------|
+| Redaction patterns | Adds Soloknuckle's 19 credential regexes to Hermes' transcript redactor |
+| `soloknuckle:hygiene` skill | Teaches the agent when to run the checks |
+| `hermes hygiene` | CLI: `check`, `secrets`, `intercept <cmd>` |
+| `/hygiene` | In-session command |
+| Weekly hygiene report | Automation blueprint for the Hermes scheduler |
+
+No hooks. No middleware. Nothing rewrites LLM input or injects context.
 
 ### Setup
 
-1. Install the plugin: `hermes plugins install soloknuckle`
-2. Enable in Hermes: Capabilities → Plugins → Soloknuckle
-3. Hermes can now call `soloknuckle.secrets`, `soloknuckle.intercept`, and `soloknuckle.health`
+```bash
+# from a checkout
+hermes plugins validate ./hermes-plugin
+hermes plugins enable soloknuckle
+hermes hygiene --help
+```
+
+See [HERMES-INTEGRATION.md](HERMES-INTEGRATION.md) for the full surface map,
+the ethics rules each surface follows, and catalog submission.
 
 ## Security
 

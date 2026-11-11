@@ -1,8 +1,14 @@
-import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { describe, it, expect, vi } from 'vitest';
 import { handleRequest, TOOLS } from '../cli/mcp-server';
-import fs from 'fs';
-import path from 'path';
-import { execSync } from 'child_process';
+
+// The health tool shells out to npm/git. In a test run that would invoke this
+// very suite again (npm test -> vitest -> health -> npm test ...), so the
+// process boundary is stubbed: the tool still returns its documented shape.
+vi.mock('child_process', () => ({
+  execSync: () => {
+    throw new Error('child_process disabled in tests');
+  },
+}));
 
 describe('MCP Server', () => {
   describe('tools/list', () => {
@@ -99,7 +105,7 @@ describe('MCP Server', () => {
       expect(typeof parsed.score).toBe('number');
       expect(typeof parsed.grade).toBe('string');
       expect(Array.isArray(parsed.issues)).toBe(true);
-    }, 120000);
+    }, 20000);
   });
 
   describe('tool error handling', () => {

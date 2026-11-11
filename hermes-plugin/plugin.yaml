@@ -1,0 +1,32 @@
+name: soloknuckle
+version: 5.1.0
+description: >-
+  Production hygiene for solo developers. Three tools — secret scanning, a
+  command firewall, and a project health score — plus native Hermes surfaces:
+  credential redaction patterns, a hygiene skill, `hermes hygiene`, /hygiene,
+  and a weekly hygiene report.
+author: Soloknuckle Contributors
+license: ISC
+homepage: https://github.com/z99wE/soloknucklefXrhermes
+manifest_version: 2
+requires_hermes: ">=0.22.0"
+api: dashboard/plugin_api.py
+desktop: true
+tags:
+  - security
+  - secrets
+  - hygiene
+  - devops
+provides_tools:
+  - soloknuckle.secrets
+  - soloknuckle.intercept
+  - soloknuckle.health
+provides_hooks: []
+requires_env: []
+config_schema:
+  redaction_enabled:
+    type: bool
+    default: true
+    description: >-
+      Add Soloknuckle's credential patterns to Hermes' transcript redactor.
+      Additive only — it can never weaken a built-in pattern.
