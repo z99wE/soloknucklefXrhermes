@@ -63,6 +63,11 @@ entirely. That is git's design, not a bug in this tool.
 `package.json`, and the outcome of your own lint and test scripts. Nothing else
 is read, and nothing is transmitted.
 
+**No environment loading.** The tool does not read `.env` files. Loading one
+would inject its variables into the `npm run lint` / `npm test` subprocesses
+that `check` spawns, so a repository you just cloned could set `NODE_OPTIONS`
+and execute code. Configuration is a JSON rule file, not environment variables.
+
 ## Supply chain
 
 - Dependencies are three runtime packages (`chalk`, `commander`, `dotenv`), all

@@ -3,12 +3,14 @@ import { Command } from 'commander';
 import chalk from 'chalk';
 import fs from 'fs';
 import path from 'path';
-import dotenv from 'dotenv';
 import { scanSecrets, interceptCommand, calculateHealth, getGitDiff } from './core';
 import { getVersion } from './version';
 import { printBanner } from './banner';
 
-dotenv.config({ quiet: true });
+// Deliberately no dotenv. The engine reads no configuration, and loading a
+// checked-out `.env` would inject its variables into the `npm run lint` /
+// `npm test` subprocesses that `check` spawns — which is a code-execution
+// vector in any repository you just cloned.
 
 const program = new Command();
 

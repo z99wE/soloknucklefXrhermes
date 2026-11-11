@@ -24,6 +24,6 @@ export default [
     },
   },
   {
-    ignores: ['dist/**', 'dist-bin/**', 'node_modules/**', 'vscode/**'],
+    ignores: ['dist/**', 'dist-bin/**', 'node_modules/**'],
   },
 ];
