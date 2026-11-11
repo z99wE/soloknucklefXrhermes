@@ -1,12 +1,16 @@
 import { build } from 'esbuild';
-import { copyFileSync, mkdirSync, rmSync } from 'fs';
-import { execSync } from 'child_process';
+import { mkdirSync, rmSync } from 'fs';
+import { execFileSync } from 'child_process';
 import path from 'path';
 
+// Produces one portable tarball: a single bundled CommonJS file with a Node
+// shebang, so it runs anywhere Node >= 20 is installed. The JSON rule file is
+// inlined by esbuild, so the archive is self-contained.
 const dir = 'dist-bin';
-const outfile = path.join(dir, 'soloknuckle-bundle');
-const targets = ['linux-x64', 'linux-arm64', 'linux-armv7', 'darwin-x64', 'darwin-arm64'];
+const bundle = path.join(dir, 'soloknuckle');
+const archive = path.join(dir, 'soloknuckle.tar.gz');
 
+rmSync(dir, { recursive: true, force: true });
 mkdirSync(dir, { recursive: true });
 
 await build({
@@ -19,18 +23,10 @@ await build({
     'ignored-dynamic-require': 'silent',
     'umd-global-name': 'silent',
   },
-  outfile,
+  outfile: bundle,
 });
 
-execSync(`chmod +x ${outfile}`);
+execFileSync('chmod', ['+x', bundle]);
+execFileSync('tar', ['-czf', archive, '-C', dir, 'soloknuckle']);
 
-for (const [plat, arch] of targets.map((t) => t.split('-'))) {
-  const tmp = path.join(dir, `tmp-${plat}-${arch}`);
-  mkdirSync(tmp, { recursive: true });
-  copyFileSync(outfile, path.join(tmp, 'soloknuckle'));
-  execSync(`tar -C "${tmp}" -czf "${path.join(dir, `soloknuckle-${plat}-${arch}.tar.gz`)}" soloknuckle`);
-  rmSync(tmp, { recursive: true, force: true });
-}
-
-console.log(`Built ${targets.length} release tarballs in ${dir}:`);
-console.log(targets.map((t) => `  soloknuckle-${t}.tar.gz`).join('\n'));
+console.log(`Built ${archive}`);

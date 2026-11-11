@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from 'vitest';
-import { handleRequest, TOOLS } from '../cli/mcp-server';
+import { Readable, Writable } from 'stream';
+import { handleRequest, serve, TOOLS } from '../cli/mcp-server';
 
 // The health tool shells out to npm/git. In a test run that would invoke this
 // very suite again (npm test -> vitest -> health -> npm test ...), so the
@@ -9,6 +10,19 @@ vi.mock('child_process', () => ({
     throw new Error('child_process disabled in tests');
   },
 }));
+
+/** Drive the MCP transport with in-memory streams instead of process globals. */
+function runServe(lines: string[]): Promise<string[]> {
+  const written: string[] = [];
+  const output = new Writable({
+    write(chunk, _encoding, callback) {
+      written.push(chunk.toString());
+      callback();
+    },
+  });
+  const input = Readable.from(lines);
+  return new Promise(resolve => serve(input, output, () => resolve(written)));
+}
 
 describe('MCP Server', () => {
   describe('tools/list', () => {
@@ -106,6 +120,71 @@ describe('MCP Server', () => {
       expect(typeof parsed.grade).toBe('string');
       expect(Array.isArray(parsed.issues)).toBe(true);
     }, 20000);
+  });
+
+  describe('protocol', () => {
+    it('answers initialize with the server identity', async () => {
+      const res = await handleRequest({ jsonrpc: '2.0', id: 1, method: 'initialize' });
+      const result = res?.result as any;
+      expect(result.serverInfo.name).toBe('soloknuckle');
+      expect(result.capabilities.tools).toBeDefined();
+    });
+
+    it('stays silent for notifications/initialized', async () => {
+      const res = await handleRequest({ jsonrpc: '2.0', id: 1, method: 'notifications/initialized' });
+      expect(res).toBeUndefined();
+    });
+
+    it('rejects unknown methods', async () => {
+      const res = await handleRequest({ jsonrpc: '2.0', id: 7, method: 'resources/list' });
+      expect(res?.error?.code).toBe(-32601);
+    });
+
+    it('rejects tools/call without params', async () => {
+      const res = await handleRequest({ jsonrpc: '2.0', id: 8, method: 'tools/call' });
+      expect(res?.error?.code).toBe(-32602);
+    });
+
+    it('reports unusable tool input instead of crashing the server', async () => {
+      const bomb = { toString() { throw new Error('unusable diff'); } };
+      const res = await handleRequest({
+        jsonrpc: '2.0', id: 9, method: 'tools/call',
+        params: { name: 'soloknuckle_secrets', arguments: { diff: bomb } },
+      });
+      expect((res?.result as any)?.isError).toBe(true);
+      expect((res?.result as any)?.content?.[0]?.text).toContain('unusable diff');
+    });
+  });
+
+  describe('transport', () => {
+    it('answers pipelined requests in order', async () => {
+      const written = await runServe([
+        JSON.stringify({ jsonrpc: '2.0', id: 1, method: 'initialize' }) + '\n',
+        JSON.stringify({ jsonrpc: '2.0', id: 2, method: 'tools/list' }) + '\n',
+        JSON.stringify({ jsonrpc: '2.0', id: 3, method: 'notifications/initialized' }) + '\n',
+      ]);
+
+      expect(written).toHaveLength(2);
+      expect(JSON.parse(written[0]).id).toBe(1);
+      expect(JSON.parse(written[1]).result.tools).toHaveLength(3);
+    });
+
+    it('ignores blank and non-JSON lines', async () => {
+      const written = await runServe([
+        '\n',
+        'this is not json\n',
+        JSON.stringify({ jsonrpc: '2.0', id: 4, method: 'tools/list' }) + '\n',
+      ]);
+      expect(written).toHaveLength(1);
+      expect(JSON.parse(written[0]).id).toBe(4);
+    });
+
+    it('handles a request split across two chunks', async () => {
+      const payload = JSON.stringify({ jsonrpc: '2.0', id: 5, method: 'tools/list' });
+      const written = await runServe([payload.slice(0, 20), payload.slice(20) + '\n']);
+      expect(written).toHaveLength(1);
+      expect(JSON.parse(written[0]).id).toBe(5);
+    });
   });
 
   describe('tool error handling', () => {

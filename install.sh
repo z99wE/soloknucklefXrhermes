@@ -1,12 +1,21 @@
 #!/usr/bin/env bash
+# Soloknuckle installer for Linux and macOS.
+#
+#   curl -fsSL https://raw.githubusercontent.com/z99wE/soloknucklefXrhermes/main/install.sh | bash
+#
+# Downloads one release tarball (a single bundled Node script, so there is no
+# platform-specific build to get wrong) and puts it on your PATH. It never edits
+# your shell rc files: if the install directory is not on PATH it tells you the
+# exact line to add.
+#
+# Prefer npm? `npm install -g soloknuckle` does the same thing.
+
 set -euo pipefail
 
-# Soloknuckle Installer for Linux/macOS
-# Usage: curl -fsSL https://raw.githubusercontent.com/soch-ship-it/soloknuckle/main/install.sh | bash
-
-REPO="soch-ship-it/soloknuckle"
+REPO="${SOLOKNUCKLE_REPO:-z99wE/soloknucklefXrhermes}"
 INSTALL_DIR="${SOLOKNUCKLE_INSTALL_DIR:-$HOME/.local/bin}"
 BINARY_NAME="soloknuckle"
+MIN_NODE_MAJOR=20
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -16,141 +25,93 @@ NC='\033[0m'
 
 info()  { printf "${GREEN}[info]${NC}  %s\n" "$1"; }
 warn()  { printf "${YELLOW}[warn]${NC}  %s\n" "$1"; }
-error() { printf "${RED}[error]${NC} %s\n" "$1"; exit 1; }
+error() { printf "${RED}[error]${NC} %s\n" "$1" >&2; exit 1; }
 
 check_deps() {
-  for cmd in curl tar; do
-    command -v "$cmd" >/dev/null 2>&1 || error "'$cmd' is required but not found."
+  for cmd in curl tar node; do
+    command -v "$cmd" >/dev/null 2>&1 || error "'$cmd' is required but not installed."
   done
-}
 
-detect_platform() {
-  local os arch
-  os="$(uname -s)"
-  arch="$(uname -m)"
-
-  case "$os" in
-    Linux*)  PLATFORM="linux" ;;
-    Darwin*) PLATFORM="darwin" ;;
-    *)       error "Unsupported OS: $os" ;;
-  esac
-
-  case "$arch" in
-    x86_64|amd64)   ARCH="x64" ;;
-    arm64|aarch64)  ARCH="arm64" ;;
-    armv7l|armhf)   ARCH="armv7" ;;
-    *)              error "Unsupported architecture: $arch" ;;
-  esac
-
-  info "Detected platform: ${PLATFORM}-${ARCH}"
-}
-
-get_latest_version() {
-  local version
-  version=$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" | grep '"tag_name"' | head -1 | sed -E 's/.*"tag_name":\s*"([^"]+)".*/\1/')
-  if [ -z "$version" ]; then
-    version="v1.0.0"
-    warn "Could not detect latest version, using ${version}"
+  local major
+  major="$(node -p 'process.versions.node.split(".")[0]')"
+  if [ "$major" -lt "$MIN_NODE_MAJOR" ]; then
+    error "Node ${MIN_NODE_MAJOR}+ is required (found $(node -v))."
   fi
-  echo "$version"
 }
 
-install_binary() {
-  local version="$1"
-  local tarball="soloknuckle-${PLATFORM}-${ARCH}.tar.gz"
-  local url="https://github.com/${REPO}/releases/download/${version}/${tarball}"
+latest_version() {
+  if [ -n "${SOLOKNUCKLE_VERSION:-}" ]; then
+    printf '%s' "$SOLOKNUCKLE_VERSION"
+    return
+  fi
 
+  local tag
+  tag="$(curl -fsSL "https://api.github.com/repos/${REPO}/releases/latest" 2>/dev/null \
+    | grep -m1 '"tag_name"' \
+    | sed -E 's/.*"tag_name": *"([^"]+)".*/\1/')" || true
+
+  if [ -z "${tag:-}" ]; then
+    error "Could not read the latest release of ${REPO}. Set SOLOKNUCKLE_VERSION=vX.Y.Z, or install with npm."
+  fi
+  printf '%s' "$tag"
+}
+
+install() {
+  local version="$1"
+  local url="https://github.com/${REPO}/releases/download/${version}/soloknuckle.tar.gz"
   local tmp_dir
   tmp_dir="$(mktemp -d)"
-  trap 'rm -rf "$tmp_dir"' EXIT
+  # shellcheck disable=SC2064  # expand tmp_dir now, not at trap time
+  trap "rm -rf '$tmp_dir'" EXIT
 
-  info "Downloading ${tarball}..."
-  curl -fsSL "$url" -o "${tmp_dir}/${tarball}" 2>/dev/null || {
-    warn "Pre-built binary not available for ${PLATFORM}-${ARCH}. Falling back to npm."
-    install_via_npm
-    return
-  }
+  info "Downloading ${BINARY_NAME} ${version}"
+  curl -fsSL "$url" -o "$tmp_dir/soloknuckle.tar.gz" \
+    || error "No release asset at ${url}. Install with npm instead: npm install -g soloknuckle"
 
-  info "Extracting..."
-  tar -xzf "${tmp_dir}/${tarball}" -C "$tmp_dir"
+  tar -xzf "$tmp_dir/soloknuckle.tar.gz" -C "$tmp_dir"
+  [ -f "$tmp_dir/$BINARY_NAME" ] || error "Archive did not contain ${BINARY_NAME}."
 
   mkdir -p "$INSTALL_DIR"
-  mv "$tmp_dir/${BINARY_NAME}" "${INSTALL_DIR}/${BINARY_NAME}" 2>/dev/null || \
-    mv "$tmp_dir/${BINARY_NAME}-${PLATFORM}-${ARCH}" "${INSTALL_DIR}/${BINARY_NAME}" 2>/dev/null || \
-    mv "$tmp_dir/dist/cli/index.js" "${INSTALL_DIR}/${BINARY_NAME}" 2>/dev/null || \
-    error "Could not find binary in archive"
+  mv "$tmp_dir/$BINARY_NAME" "$INSTALL_DIR/$BINARY_NAME"
+  chmod +x "$INSTALL_DIR/$BINARY_NAME"
 
-  chmod +x "${INSTALL_DIR}/${BINARY_NAME}"
-  info "Installed ${BINARY_NAME} to ${INSTALL_DIR}/${BINARY_NAME}"
+  info "Installed to ${INSTALL_DIR}/${BINARY_NAME}"
 }
 
-install_via_npm() {
-  if command -v npm >/dev/null 2>&1; then
-    info "Installing via npm..."
-    npm install -g "$REPO" 2>/dev/null || npm install -g soloknuckle
-    info "Installed via npm globally"
-  elif command -v node >/dev/null 2>&1; then
-    error "npm not found but node is available. Please install npm first."
-  else
-    error "Neither npm nor node found. Install Node.js (https://nodejs.org) and re-run."
-  fi
-}
-
-setup_path() {
-  if [[ ":$PATH:" != *":${INSTALL_DIR}:"* ]]; then
-    warn "${INSTALL_DIR} is not in your PATH."
-    local shell_name
-    shell_name="$(basename "${SHELL:-/bin/bash}")"
-
-    case "$shell_name" in
-      zsh)  local rc="~/.zshrc" ;;
-      bash) local rc="~/.bashrc" ;;
-      fish) local rc="~/.config/fish/config.fish" ;;
-      *)    local rc="~/.profile" ;;
-    esac
-
-    if [ "$shell_name" = "fish" ]; then
-      echo "set -gx PATH ${INSTALL_DIR} \$PATH" >> "${HOME}/.config/fish/config.fish"
-    else
-      echo "export PATH=\"${INSTALL_DIR}:\$PATH\"" >> "${HOME}/${rc#~/}"
-    fi
-
-    info "Added ${INSTALL_DIR} to ${rc}. Run 'source ${rc}' or restart your terminal."
-  fi
-}
-
-verify_install() {
-  if command -v "${BINARY_NAME}" >/dev/null 2>&1; then
-    info "Verification: $(${BINARY_NAME} --version 2>/dev/null || echo 'installed')"
-  elif [ -x "${INSTALL_DIR}/${BINARY_NAME}" ]; then
-    info "Verification: ${INSTALL_DIR}/${BINARY_NAME} is executable"
-    warn "Add ${INSTALL_DIR} to your PATH or run ${INSTALL_DIR}/${BINARY_NAME} directly"
-  fi
+check_path() {
+  case ":${PATH}:" in
+    *":${INSTALL_DIR}:"*) ;;
+    *)
+      warn "${INSTALL_DIR} is not on your PATH. Add this line to your shell rc file:"
+      printf '\n    export PATH="%s:$PATH"\n\n' "$INSTALL_DIR"
+      ;;
+  esac
 }
 
 main() {
-  printf "${BOLD}Soloknuckle Installer${NC}\n"
-  printf "Production Hygiene for AI-Assisted Development\n\n"
+  printf "${BOLD}Soloknuckle${NC} - production hygiene for solo developers\n\n"
 
   check_deps
-  detect_platform
-
   local version
-  version="$(get_latest_version)"
-  info "Latest version: ${version}"
+  version="$(latest_version)"
+  install "$version"
+  check_path
 
-  install_binary "$version"
-  setup_path
-  verify_install
+  printf '\n'
+  if command -v "$BINARY_NAME" >/dev/null 2>&1; then
+    info "Verified: $("$BINARY_NAME" --version 2>/dev/null || echo 'installed')"
+  fi
 
-  echo ""
-  info "Installation complete!"
-  echo ""
-  echo "  Get started:"
-  echo "    cd your-project"
-  echo "    soloknuckle init"
-  echo "    soloknuckle check"
-  echo ""
+  cat <<'EOF'
+
+Next steps:
+
+    cd your-project
+    soloknuckle init      # scaffold AGENTS.md and safe git hooks
+    soloknuckle check     # score the project
+
+For the Hermes plugin, see hermes-plugin/ in the repository.
+EOF
 }
 
 main "$@"

@@ -1,23 +1,24 @@
 #!/usr/bin/env node
 
+import { Readable, Writable } from 'stream';
 import { scanSecrets, interceptCommand, calculateHealth, getGitDiff } from './core';
-import { getVersion } from './path-utils';
+import { getVersion } from './version';
 
-interface MCPRequest {
+export interface MCPRequest {
   jsonrpc: '2.0';
   id: number | string;
   method: string;
   params?: Record<string, unknown>;
 }
 
-interface MCPResponse {
+export interface MCPResponse {
   jsonrpc: '2.0';
   id: number | string;
   result?: unknown;
   error?: { code: number; message: string; data?: unknown };
 }
 
-const TOOLS = [
+export const TOOLS = [
   {
     name: 'soloknuckle_secrets',
     description: 'Scan a git diff for secrets, API keys, tokens, and credentials. Pass empty string to scan staged/unstaged diff.',
@@ -47,7 +48,7 @@ const TOOLS = [
   },
 ];
 
-async function handleRequest(req: MCPRequest): Promise<MCPResponse | undefined> {
+export async function handleRequest(req: MCPRequest): Promise<MCPResponse | undefined> {
   switch (req.method) {
     case 'initialize':
       return {
@@ -79,21 +80,23 @@ async function handleRequest(req: MCPRequest): Promise<MCPResponse | undefined> 
   }
 }
 
-async function handleToolCall(id: number | string, name: string, args: Record<string, unknown>): Promise<MCPResponse> {
+export async function handleToolCall(
+  id: number | string,
+  name: string,
+  args: Record<string, unknown>,
+): Promise<MCPResponse> {
   try {
     let result: unknown;
 
     switch (name) {
       case 'soloknuckle_secrets': {
         const diff = String(args.diff || '');
-        const diffToScan = diff || getGitDiff();
-        result = scanSecrets(diffToScan);
+        result = scanSecrets(diff || getGitDiff());
         break;
       }
 
       case 'soloknuckle_intercept': {
-        const command = String(args.command || '');
-        result = interceptCommand(command);
+        result = interceptCommand(String(args.command || ''));
         break;
       }
 
@@ -126,12 +129,23 @@ async function handleToolCall(id: number | string, name: string, args: Record<st
   }
 }
 
-function main() {
+/**
+ * Speak MCP over a pair of streams. Kept free of process globals so the
+ * transport can be exercised in tests with an in-memory pipe.
+ *
+ * Requests are handled in arrival order; a malformed line is ignored rather
+ * than killing the server, because a host may write non-JSON to stdout.
+ */
+export function serve(
+  input: Readable,
+  output: Writable,
+  onEnd: () => void = () => {},
+): void {
   let buffer = '';
   let pending: Promise<void> = Promise.resolve();
 
-  process.stdin.setEncoding('utf-8');
-  process.stdin.on('data', (chunk: string) => {
+  input.setEncoding('utf-8');
+  input.on('data', (chunk: string) => {
     buffer += chunk;
     const lines = buffer.split('\n');
     buffer = lines.pop() || '';
@@ -139,25 +153,30 @@ function main() {
     for (const line of lines) {
       const trimmed = line.trim();
       if (!trimmed) continue;
+      let request: MCPRequest;
       try {
-        const req = JSON.parse(trimmed) as MCPRequest;
-        pending = pending.then(async () => {
-          const res = await handleRequest(req);
-          if (res) process.stdout.write(JSON.stringify(res) + '\n');
-        }).catch(() => {});
+        request = JSON.parse(trimmed) as MCPRequest;
       } catch {
-        // Ignore non-JSON lines
+        continue; // not JSON: ignore
       }
+      pending = pending
+        .then(async () => {
+          const response = await handleRequest(request);
+          if (response) output.write(JSON.stringify(response) + '\n');
+        })
+        .catch(() => {});
     }
   });
 
-  process.stdin.on('end', () => {
-    pending.finally(() => process.exit(0));
+  input.on('end', () => {
+    pending.finally(onEnd);
   });
+}
+
+function main(): void {
+  serve(process.stdin, process.stdout, () => process.exit(0));
 }
 
 if (require.main === module) {
   main();
 }
-
-export { handleRequest, TOOLS, main };

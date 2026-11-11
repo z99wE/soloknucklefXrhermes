@@ -6,8 +6,12 @@ on:
   pull_request:
     branches: [main, develop]
 
+permissions:
+  contents: read
+
 jobs:
-  test:
+  engine:
+    name: Engine (node ${{ matrix.node-version }}, ${{ matrix.os }})
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
@@ -25,11 +29,18 @@ jobs:
           node-version: ${{ matrix.node-version }}
           cache: 'npm'
 
+      # The plugin is Python, and the parity test compares both engines, so the
+      # runner needs an interpreter. This also gives each runner the same one.
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
       - name: Install dependencies
         run: npm ci
 
-      - name: Security audit
-        run: npm audit --audit-level=high
+      - name: Security audit (runtime dependencies)
+        run: npm audit --omit=dev --audit-level=high
 
       - name: Type check
         run: npm run typecheck
@@ -37,12 +48,36 @@ jobs:
       - name: Lint
         run: npm run lint
 
-      - name: Run tests
+      - name: Test (includes TypeScript <-> Python parity)
         run: npm test
 
-      - name: Run tests with coverage
+      - name: Coverage gate
         run: npm run test:coverage
 
-  # Tag releases (GitHub release binaries) live in release.yml; npm publishing
-  # is a manual step protected by the owner's 2FA, so it is intentionally absent here.
-  # This workflow only tests pushes and PRs so the two never race on a tag.
+      - name: Build
+        run: npm run build
+
+      - name: Build release bundle
+        run: npm run build:bin
+
+  plugin:
+    name: Hermes plugin
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Install pytest
+        run: python -m pip install --upgrade pytest
+
+      - name: Run plugin tests
+        run: python -m pytest hermes-plugin/tests -q
+
+  # Tag releases (GitHub release + bundle) live in release.yml; npm publishing
+  # is a manual step protected by the owner's 2FA, so it is intentionally absent
+  # here. This workflow only tests pushes and PRs so the two never race on a tag.
