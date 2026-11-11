@@ -1,23 +1,30 @@
 # Soloknuckle
 
-Production hygiene for solo developers, in three checks that run on your machine
-and nowhere else:
+**Deterministic production hygiene for solo developers** — secret scanning, a command firewall, and a project health gate that run the same way everywhere: in your terminal, in git hooks, in MCP clients, and inside Hermes Agent.
 
-- **Secrets** — did a credential just enter the diff?
-- **Firewall** — is this shell command about to destroy something?
-- **Health** — is the project actually green before you push it?
+It doesn’t rely on a prompt remembering to be careful. It enforces checks as tools and gates, with one rule set and the same verdict on every surface.
 
-It answers the same way from a terminal, a git hook, an MCP client, and Hermes
-Agent, because all of them call one engine over one rule file.
+- **Secrets** — catches credentials entering a diff before they become history
+- **Firewall** — flags or blocks dangerous shell commands before they run
+- **Health** — scores whether a project is actually ready to push/ship
 
-No telemetry, no analytics, no network calls. The whole tool is deterministic:
-same input, same output, every time.
+Local-first, deterministic, and quiet by design: no telemetry, no analytics, no network calls, no background state.
+
+## Why Soloknuckle
+
+Most "be careful" guidance lives in prompts and habits. Soloknuckle turns the critical parts into **executable checks**:
+
+- **Deterministic, not probabilistic:** the same input produces the same result, every time.
+- **One engine, many surfaces:** the CLI, git hooks, MCP server, and Hermes plugin all follow the same rules (`hermes-plugin/rules.json`) with cross-engine parity tests.
+- **Useful at the moment of risk:** scans staged changes, evaluates commands before execution, and gates pushes/CI with explicit exit codes.
+- **Safe to adopt:** `init` never overwrites your existing hooks (it chains them), the plugin registers no hooks/middleware, and nothing rewrites model input or runs unless asked.
+- **Transparent limits:** pattern-based diff scanning and syntax-based command checks are fast and dependable, and their boundaries are documented.
 
 ## Install
 
 ```bash
-npx soloknuckle init       # try it without installing
-npm install -g soloknuckle # install once
+npx soloknuckle init        # try it without installing
+npm install -g soloknuckle  # install once
 ```
 
 Or the shell installer (needs Node 20+):
@@ -32,46 +39,38 @@ curl -fsSL https://raw.githubusercontent.com/z99wE/soloknucklefXrhermes/main/ins
 cd your-project
 soloknuckle init      # scaffold AGENTS.md and safe git hooks
 soloknuckle check     # score the project
-git commit            # the hooks scan the staged diff and commit message
+git commit            # hooks scan the staged diff and commit message
 ```
 
-`init` installs `pre-commit` (secret scan), `commit-msg` (Conventional Commits),
-and `pre-push` (health check), and never overwrites a hook you already have: it
-moves the existing hook to `<hook>.local` and chains it. Running `init` twice is
-a no-op.
+`init` installs `pre-commit` (secret scan), `commit-msg` (Conventional Commits), and `pre-push` (blocking health check), and **never overwrites a hook you already have**: it preserves existing hooks as `<hook>.local` and chains them. Running `init` twice is a no-op.
 
 ## The three checks
 
-### Secrets
+### 1) Secrets — stop credentials before they land
 
-Scans the staged diff (or one you pass in) for credentials that are about to
-become permanent.
+Scans added lines in a diff (staged diff by default, or text you pass in) for known credential patterns before they become permanent.
 
 ```bash
 soloknuckle secrets
 ```
 
-```
+```text
 2 violation(s) found:
   -> Line 12: Stripe live key detected.
   -> Line 40: Private key detected.
 ```
 
-Covered: Stripe, OpenAI, Anthropic, AWS, GitHub, GitLab, Slack, SendGrid, GCP,
-npm, Hugging Face, Shopify, database URIs with inline passwords, and private
-keys. The patterns live in [`hermes-plugin/rules.json`](hermes-plugin/rules.json).
+**Covers common high-risk credentials:** Stripe, OpenAI/Anthropic-style keys, AWS, GitHub/GitLab, Slack, SendGrid, GCP, npm, Hugging Face, Shopify, database URIs with inline passwords, private keys, and more. Patterns live in [`hermes-plugin/rules.json`](hermes-plugin/rules.json).
 
-Two escapes are built in and both are greppable:
+**Explicit, reviewable escapes (greppable):**
+- a match that is itself a placeholder token (`xxxx`, `your_key_here`, `mock`, …) is ignored
+- any line containing `soloknuckle:allow` is ignored (intended for fixtures/docs — explain it in review)
 
-- a token that is itself a placeholder (`xxxx`, `your_key_here`, `mock`, …) is
-  ignored;
-- any line containing `soloknuckle:allow` is ignored. Use it for fixtures, and
-  expect to explain it in review.
+> Scope: diff-based, pattern-based scanning of added lines. It is fast and deterministic, not a guarantee of catching every possible secret form.
 
-### Firewall
+### 2) Firewall — evaluate commands before you run them
 
-Evaluates a command before you run it. Two tiers: **blocked** (exit 1) for the
-unrecoverable, **caution** (exit 0) for the merely regrettable.
+Checks a shell command and returns a clear verdict: **blocked** (exit 1) for clearly destructive forms, **caution** (exit 0, with a safer suggestion) for risky ones, **allowed** (exit 0) otherwise.
 
 ```bash
 soloknuckle intercept rm -rf /
@@ -85,23 +84,20 @@ soloknuckle intercept ls -la
 # Allowed
 ```
 
-Blocked: root and home deletion (including `sudo`, `--no-preserve-root`, `/*`,
-`$HOME`), remote scripts piped into a shell (`curl … | sh`, `bash <(curl …)`),
-raw disk writes, filesystem formats, SQL `DROP`.
+**Blocked examples:** root/home recursive deletion (incl. `sudo`/`doas`, `--no-preserve-root`, `/*`, `~`, `$HOME`), remote scripts piped into a shell or via process substitution, fork bombs, raw disk writes, filesystem formats, SQL `DROP`.  
+**Caution examples:** `rm -rf`, `git push --force`, `chmod 777`, `git reset --hard`, `git commit --amend`.
 
-Caution: `rm -rf`, `git push --force`, `chmod 777`, `git reset --hard`,
-`git commit --amend`.
+> Scope: syntax/shape-based checks for known dangerous forms (not intent-proof against all indirection/obfuscation).
 
-### Health
+### 3) Health — a real gate, not a vague signal
 
-One score, four checks, and a non-zero exit when it is too low — so it can gate
-CI.
+Runs four deterministic checks and returns a score, grade, and actionable issues. Use `--min-score` to gate commits, pushes, or CI.
 
 ```bash
 soloknuckle check --min-score 80
 ```
 
-```
+```text
   Score: 75/100  B
 
   Issues:
@@ -111,16 +107,14 @@ soloknuckle check --min-score 80
 
 | Check | Passes when |
 |---|---|
-| Dependencies | a `package.json` exists |
+| Dependencies | a `package.json` exists in the checked project |
 | Lint | `npm run lint` exits 0 |
 | Tests | `npm test` exits 0 |
 | Secrets | the current diff is clean |
 
-`npm` is only invoked when the project has its own `package.json`; otherwise it
-walks up the tree and lints somebody else's repository. A project without one
-scores 25 and says so.
+`npm` checks run only when the project has its own `package.json` (to avoid linting a parent repo). A non-npm project reports what’s missing rather than guessing. Grades: **A ≥ 90, B ≥ 70, C ≥ 40, F below 40**.
 
-Grades: A ≥ 90, B ≥ 70, C ≥ 40, F below that.
+> Scope: a practical npm-project hygiene gate (presence/exit-status based), not a universal code-quality or security audit.
 
 ## Commands
 
@@ -128,16 +122,12 @@ Grades: A ≥ 90, B ≥ 70, C ≥ 40, F below that.
 |---|---|---|
 | `soloknuckle init` | Scaffold `AGENTS.md` and git hooks (`pre-commit`, `commit-msg`, `pre-push`) | 0 |
 | `soloknuckle check [--min-score N]` | Health score (default gate: 70) | 0 pass, 1 below gate, 2 bad flag |
-| `soloknuckle secrets [diff]` | Scan a diff for credentials | 0 clean, 1 violations |
+| `soloknuckle secrets [diff]` | Scan a diff for known credential patterns | 0 clean, 1 violations |
 | `soloknuckle intercept <cmd...>` | Evaluate a shell command | 0 allowed/caution, 1 blocked |
 
 ## Architecture
 
-One rule file, two implementations, every surface on top. The TypeScript engine
-serves the CLI, the git hooks, and the MCP server; the Python engine serves the
-Hermes plugin, which must stay self-contained (Hermes cannot shell out to `npx`
-to answer a tool call). Both read `hermes-plugin/rules.json`, and
-`test/parity.test.ts` fails the build if they ever disagree.
+One rule file, two implementations, every surface on top. The TypeScript engine serves the CLI, git hooks, and MCP server; the Python engine serves the Hermes plugin (self-contained, no `npx` dependency at tool-call time). Both read [`hermes-plugin/rules.json`](hermes-plugin/rules.json), and `test/parity.test.ts` fails the build if they ever disagree.
 
 ```mermaid
 flowchart LR
@@ -179,7 +169,7 @@ sequenceDiagram
 
     Dev->>Git: git commit
     Git->>Hook: run hook
-    Hook->>Engine: scan
+    Hook->>Engine: scan staged diff
     Engine->>Rules: load patterns
     Engine->>Git: git diff --cached
     Git-->>Engine: staged diff
@@ -196,12 +186,9 @@ sequenceDiagram
 
 ## Hermes Agent integration
 
-Soloknuckle is a native Hermes plugin, and it is optional on both sides: remove
-it and Hermes keeps working; skip Hermes and the CLI keeps working. Every surface
-is declared in [`hermes-plugin/plugin.yaml`](hermes-plugin/plugin.yaml) and
-visible in `hermes plugins capabilities`. The agent sees three tools and five
-host surfaces: redaction, a skill, a CLI command, a slash command, and a
-blueprint. Nothing runs unless the user or the agent asks for it.
+Soloknuckle is a native Hermes plugin — and fully optional on both sides: remove it and Hermes keeps working; skip Hermes and the CLI keeps working. It exposes **real, invocable surfaces** (not just guidance): 3 tools plus redaction, a skill, CLI/slash commands, and a weekly-report blueprint. Every surface is declared in [`hermes-plugin/plugin.yaml`](hermes-plugin/plugin.yaml) and visible in `hermes plugins capabilities`.
+
+Crucially, it’s designed to be trustworthy inside an agent: **no hooks, no middleware, no prompt/context rewriting**. `provides_hooks: []` and `provides_middleware: []` are the machine-checkable form of that promise; tools run only when invoked.
 
 ```mermaid
 flowchart TB
@@ -226,31 +213,28 @@ flowchart TB
     tools --> engine
     commandReg --> engine
     scheduler -->|weekly hygiene report| tools
-    skillReg -.->|"tells the agent when to check"| tools
-    engine -->|"19 credential patterns"| redactor
+    skillReg -.->|"guides when to check"| tools
+    engine -->|"credential patterns"| redactor
 ```
 
 | Surface | Type | What it gives you |
 |---|---|---|
-| `soloknuckle.secrets` | tool | Scan a diff for credentials |
+| `soloknuckle.secrets` | tool | Scan a diff for known credential patterns |
 | `soloknuckle.intercept` | tool | Evaluate a command before it runs |
 | `soloknuckle.health` | tool | Score the current project |
-| Redaction patterns | additive | Credentials never reach the transcript |
-| `soloknuckle:hygiene` | skill | Teaches the agent when to check |
+| Redaction patterns | additive | Helps keep matching credentials out of transcripts |
+| `soloknuckle:hygiene` | skill | Teaches the agent when to run checks |
 | `hermes hygiene` | CLI | `check`, `secrets`, `intercept <cmd>` |
 | `/hygiene` | slash command | Same checks, mid-session |
 | Weekly hygiene report | blueprint | A scheduled check nobody has to remember |
 
-The design rule for every one of them: **no hooks, no middleware, nothing that
-rewrites model input or injects context.** `provides_hooks: []` and
-`provides_middleware: []` in the manifest are the machine-checkable form of that
-promise. See [HERMES-INTEGRATION.md](HERMES-INTEGRATION.md) for the full surface
-map, the per-surface safety argument, and what is deliberately left out.
+See [HERMES-INTEGRATION.md](HERMES-INTEGRATION.md) for the full surface map, safety rationale, and what is deliberately left out.
 
 ### Setup
 
 ```bash
-hermes plugins install soloknuckle    # or: hermes plugins validate ./hermes-plugin
+hermes plugins install soloknuckle    # or validate a local checkout
+hermes plugins validate ./hermes-plugin
 hermes plugins enable soloknuckle
 hermes hygiene --help
 ```
@@ -281,17 +265,24 @@ Every pattern is data, not code:
 }
 ```
 
-Edit `hermes-plugin/rules.json`, run `npm test`, and the change reaches the CLI,
-the MCP server, the hooks, the redactor, and the slash command together. The
-parity test runs a shared corpus through both engines and fails on the first
-disagreement, so a rule cannot mean two different things.
+Edit `hermes-plugin/rules.json`, run `npm test`, and the change reaches the CLI, MCP server, hooks, redactor, and Hermes surfaces together. A shared parity corpus (`test/parity.test.ts` + `hermes-plugin/tests/`) keeps both engines in agreement.
+
+## Reliability and safety boundaries
+
+- **No exfiltration, no hidden behavior:** no telemetry, no analytics, no network calls, no background watchers, no daemon, no state files written by the engine.
+- **No surprise writes:** `init` scaffolds `AGENTS.md` and installs/chains hooks; it preserves existing hooks. Uninstall scripts remove only Soloknuckle’s own directories.
+- **Deterministic checks with explicit scope:** secret scanning is diff/regex-based; the firewall is syntax-based; health is an npm-project gate. Results are explainable and reproducible.
+- **Credential handling:** violation messages name the pattern/line, not the secret value. Redaction is additive.
+- **Hermes-safe by construction:** declared surfaces match registrations; no hooks, no middleware, no core overrides, no self-updating code.
+
+Details: [SECURITY.md](SECURITY.md), [HERMES-INTEGRATION.md](HERMES-INTEGRATION.md), [DISCLAIMER.md](DISCLAIMER.md).
 
 ## What this tool will never do
 
-- Upload your code, diff, or command text anywhere.
+- Upload your code, diffs, or command text anywhere.
 - Run in the background, watch files, or phone home.
-- Modify your shell config, your hooks, or your repository without telling you.
-- Delete anything outside its own directories (`scripts/uninstall.sh`).
+- Modify your shell config or overwrite existing hooks without preserving them.
+- Delete anything outside its own directories (`scripts/uninstall.sh` removes only Soloknuckle artifacts).
 - Ask for an API key. There is no service to authenticate to.
 
 ## Development
@@ -299,15 +290,17 @@ disagreement, so a rule cannot mean two different things.
 ```bash
 npm install
 npm run typecheck     # tsc --noEmit
-npm run lint          # eslint (JS tooling)
-npm test              # vitest, includes TS <-> Python parity
-npm run test:coverage # thresholds: 80% statements/lines/functions
-npm run build:bin     # single-file release bundle
+npm run lint          # eslint
+npm test              # vitest (includes TS <-> Python parity)
+npm run test:coverage # coverage thresholds enforced
+npm run test:smoke    # dist CLI smoke/integration check
+npm run build         # tsc build
+npm run build:bin     # portable release bundle
 python3 -m pytest hermes-plugin/tests -q
+hermes plugins validate ./hermes-plugin
 ```
 
-The parity test needs a Python interpreter; set `SOLOKNUCKLE_PYTHON` if it is
-not on your `PATH`. See [CONTRIBUTING.md](CONTRIBUTING.md).
+The parity and plugin tests need a Python interpreter; set `SOLOKNUCKLE_PYTHON` if it is not on your `PATH`. See [CONTRIBUTING.md](CONTRIBUTING.md).
 
 ## Uninstall
 
@@ -317,10 +310,8 @@ bash scripts/uninstall.sh        # macOS / Linux
 npm uninstall -g soloknuckle
 ```
 
-It removes the plugin directory and `~/.soloknuckle`, and nothing else — not
-`~/.hermes/state.db`, not your memories, not your logs.
+Removes the plugin directory and `~/.soloknuckle`, and nothing else — not `~/.hermes/state.db`, not memories, not logs.
 
 ## License
 
-ISC. See [LICENSE](LICENSE), [SECURITY.md](SECURITY.md), and
-[DISCLAIMER.md](DISCLAIMER.md).
+ISC. See [LICENSE](LICENSE), [SECURITY.md](SECURITY.md), and [DISCLAIMER.md](DISCLAIMER.md).
