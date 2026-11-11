@@ -17,6 +17,8 @@ coverage/
 __pycache__/
 *.py[cod]
 .pytest_cache/
+.coverage
+**/.coverage
 
 # Soloknuckle's own per-project state
 .soloknuckle/

@@ -52,7 +52,7 @@ interface CompiledCommandRule {
   suggestion?: string;
 }
 
-function compile(source: string, flags = ''): RegExp {
+export function compile(source: string, flags = ''): RegExp {
   try {
     return new RegExp(source, flags);
   } catch (err) {
