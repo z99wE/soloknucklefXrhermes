@@ -1,92 +1,42 @@
-# Security Policy
+# Security
 
-## Reporting a Vulnerability
+## What Soloknuckle Protects
 
-If you discover a security vulnerability in Soloknuckle, please report it responsibly.
+- **Secrets in code** — API keys, tokens, credentials, database URIs
+- **Dangerous commands** — `rm -rf /`, `curl | sh`, SQL drops, raw disk writes
+- **Weak tests** — Missing assertions, flaky patterns, low mutation scores
 
-**Do NOT open a public GitHub issue for security vulnerabilities.**
+## What Soloknuckle Does NOT Do
 
-Instead, please email: [INSERT YOUR EMAIL HERE]
+- **No tracking.** Does not collect usage data, telemetry, or analytics.
+- **No surveillance.** Does not track which LLM, IDE, or tool you use.
+- **No phone-home.** All checks run locally. Zero external API calls.
+- **No governance.** Does not enforce policies or compliance frameworks.
+- **No prompt injection.** Does not inject text into LLM context.
+- **No middleware.** Does not wrap or intercept AI tool calls.
 
-### What to Include
+## Data Flow
 
-- Description of the vulnerability
-- Steps to reproduce
-- Potential impact
-- Suggested fix (if any)
+1. You run a command (or Hermes calls an MCP tool)
+2. Soloknuckle reads local files (git diff, package.json, etc.)
+3. Soloknuckle returns results to you (or to Hermes)
+4. **Nothing leaves your machine.**
 
-### Response Timeline
+## Privacy
 
-- **Acknowledgment:** Within 48 hours
-- **Initial assessment:** Within 1 week
-- **Resolution timeline:** Depends on severity
+- Config lives in `~/.soloknuckle/` (user-controlled, deletable)
+- Per-project data in `.soloknuckle/` (gitignored by default)
+- No names, emails, or usage data collected
+- Your identity is nobody's business
 
-### What We Promise
+## Reporting Vulnerabilities
 
-- We will respond to your report within 48 hours
-- We will work with you to understand and address the issue
-- We will credit you in the release notes (unless you prefer to remain anonymous)
-- We will not take legal action against researchers who report vulnerabilities in good faith
+Report security issues via GitHub Private Vulnerability Reporting:
+https://github.com/soch-ship-it/soloknuckle/security/advisories/new
 
-### What We Ask
+## Supply Chain
 
-- Do not publicly disclose the vulnerability until we have released a fix
-- Do not exploit the vulnerability beyond what is necessary to demonstrate it
-- Do not access or modify data that does not belong to you
-
-## Security Best Practices for Users
-
-### Installation
-
-```bash
-# Verify package integrity
-npm audit signatures
-
-# Check for known vulnerabilities
-npm audit
-```
-
-### Configuration
-
-- API keys are stored locally in `~/.soloknuckle/config.json`
-- Never commit this file to version control
-- Use environment variables when possible (`OPENAI_API_KEY`, `ANTHROPIC_API_KEY`, etc.)
-- Rotate API keys regularly
-
-### Runtime
-
-- Soloknuckle runs locally — code is not sent to external services unless you explicitly enable LLM features
-- LLM features send code to third-party providers (OpenAI, Anthropic, etc.) — review their privacy policies
-- The command firewall blocks destructive commands but is not foolproof — always review changes before committing
-
-### Network
-
-- The Express API server binds to `localhost` only by default
-- CORS is restricted to localhost origins
-- Rate limiting prevents abuse of LLM endpoints
-- Body size limits prevent memory exhaustion attacks
-
-## Dependency Security
-
-- We use `npm audit` to check for known vulnerabilities
-- Dependencies are pinned to specific versions in `package-lock.json`
-- CI runs security audits on every pull request
-- We do not use `--ignore-scripts` during development (but recommend it for production installs)
-
-## Data Handling
-
-- **No telemetry by default** — Soloknuckle does not phone home
-- **Local storage only** — all data stays in `~/.soloknuckle/`
-- **No PII collection** — we do not collect names, emails, or usage data
-- **Optional LLM features** — only enabled if you configure an API key
-
-## Supply Chain Security
-
-- Publishing to npm requires owner two-factor authentication (security key / Touch ID)
-- CI runs on GitHub Actions with pinned action versions
-- No automated publishing — manual release only
-- `npm audit signatures` verifies registry signatures
-
-## Contact
-
-For security inquiries, report via GitHub Private Vulnerability Reporting: https://github.com/soch-ship-it/soloknuckle/security/advisories/new
+- `ignore-scripts=true` blocks malicious install scripts
+- `min-package-age=72h` prevents typosquatting
+- npm provenance ties every publish to the source commit via OIDC
+- All releases are manual (no automated publishing)
