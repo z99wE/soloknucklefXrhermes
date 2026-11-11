@@ -3,79 +3,35 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Soloknuckle — Free Production Hygiene CLI for AI-Assisted Development</title>
-  <meta name="description" content="Soloknuckle is a free, open-source CLI that catches what AI-assisted development leaves behind: leaked secrets, destructive commands, flaky tests, and coverage that catches nothing. Mutation testing, a command firewall, AI-vs-human telemetry, and hard CI gates — all local, zero config, Node.js 20+.">
-  <meta name="keywords" content="AI code quality, production hygiene, AI code review, secret scanning, mutation testing, flaky test detection, vibe coding safety, CI gate, AI-generated code, cursor, claude code, copilot, developer tools, SBOM, supply chain security">
-  <meta name="author" content="Soloknuckle Contributors">
-  <meta name="robots" content="index, follow">
+  <title>Soloknuckle — Production Hygiene for Solo Developers</title>
+  <meta name="description" content="Soloknuckle catches secrets, blocks dangerous commands, and scores your tests — before you push. Local-first, no surveillance, open source.">
   <link rel="canonical" href="https://github.com/soch-ship-it/soloknuckle">
-
-  <!-- Open Graph -->
-  <meta property="og:type" content="website">
-  <meta property="og:title" content="Soloknuckle — Free Production Hygiene CLI for AI-Assisted Development">
-  <meta property="og:description" content="Catches what AI-assisted development leaves behind: leaked secrets, destructive commands, flaky tests, coverage that catches nothing. Local, free, zero config.">
-  <meta property="og:url" content="https://github.com/soch-ship-it/soloknuckle">
-  <meta property="og:image" content="https://raw.githubusercontent.com/soch-ship-it/soloknuckle/main/assets/soloknuckle-logo.svg">
-  <meta property="og:site_name" content="Soloknuckle">
-
-  <!-- Twitter -->
-  <meta name="twitter:card" content="summary_large_image">
-  <meta name="twitter:title" content="Soloknuckle — Free Production Hygiene CLI for AI-Assisted Development">
-  <meta name="twitter:description" content="Catches what AI-assisted development leaves behind: leaked secrets, destructive commands, flaky tests, coverage that catches nothing. Local, free, zero config.">
-  <meta name="twitter:image" content="https://raw.githubusercontent.com/soch-ship-it/soloknuckle/main/assets/soloknuckle-logo.svg">
-
-  <!-- JSON-LD Structured Data -->
-  <script type="application/ld+json">
-  {
-    "@context": "https://schema.org",
-    "@type": "SoftwareApplication",
-    "name": "Soloknuckle",
-    "applicationCategory": "DeveloperApplication",
-    "operatingSystem": "Node.js 20+",
-    "description": "Free, open-source production hygiene CLI for AI-assisted development: secret scanning, destructive-command firewall, mutation testing, AI-vs-human telemetry, and hard CI gates. All checks run locally.",
-    "url": "https://github.com/soch-ship-it/soloknuckle",
-    "downloadUrl": "https://www.npmjs.com/package/soloknuckle",
-    "offers": {
-      "@type": "Offer",
-      "price": "0",
-      "priceCurrency": "USD"
-    },
-    "softwareVersion": "1.0.3",
-    "license": "https://opensource.org/licenses/ISC",
-    "codeRepository": "https://github.com/soch-ship-it/soloknuckle",
-    "author": { "@type": "Organization", "name": "Soloknuckle Contributors" }
-  }
-  </script>
-
   <style>
     :root {
-      --bg: #f5f0e8;
-      --bg-alt: #ebe5d9;
-      --fg: #1a1a1a;
-      --fg-muted: #555;
-      --accent: #0055ff;
-      --accent-light: #e8f0ff;
-      --border: #1a1a1a;
-      --border-w: 2px;
-      --radius: 0;
-      --shadow: 4px 4px 0 #1a1a1a;
-      --shadow-sm: 2px 2px 0 #1a1a1a;
-      --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      --mono: 'JetBrains Mono', 'Fira Code', 'Cascadia Code', monospace;
-      --max-w: 1100px;
+      --bg: #f4f4f4;
+      --bg-alt: #e8e8e8;
+      --fg: #161616;
+      --fg-muted: #525252;
+      --accent: #0f62fe;
+      --accent-hover: #0353e9;
+      --border: #d0d0d0;
+      --border-dark: #393939;
+      --radius: 4px;
+      --font: 'IBM Plex Sans', 'Arial', sans-serif;
+      --mono: 'IBM Plex Mono', 'Menlo', monospace;
+      --max-w: 960px;
     }
 
     @media (prefers-color-scheme: dark) {
       :root {
-        --bg: #0d1117;
-        --bg-alt: #161b22;
-        --fg: #e6edf3;
-        --fg-muted: #8b949e;
-        --accent: #58a6ff;
-        --accent-light: #1a2332;
-        --border: #e6edf3;
-        --shadow: 4px 4px 0 #e6edf3;
-        --shadow-sm: 2px 2px 0 #e6edf3;
+        --bg: #161616;
+        --bg-alt: #262626;
+        --fg: #f4f4f4;
+        --fg-muted: #a8a8a8;
+        --accent: #4589ff;
+        --accent-hover: #78a9ff;
+        --border: #393939;
+        --border-dark: #525252;
       }
     }
 
@@ -85,7 +41,7 @@
       font-family: var(--font);
       background: var(--bg);
       color: var(--fg);
-      line-height: 1.6;
+      line-height: 1.5;
       -webkit-font-smoothing: antialiased;
     }
 
@@ -95,13 +51,10 @@
       padding: 0 24px;
     }
 
-    /* ── NAV ────────────────────────────────── */
+    /* NAV */
     nav {
-      position: sticky;
-      top: 0;
-      z-index: 100;
       background: var(--bg);
-      border-bottom: var(--border-w) solid var(--border);
+      border-bottom: 1px solid var(--border);
       padding: 16px 0;
     }
 
@@ -113,10 +66,9 @@
 
     .nav-brand {
       font-size: 1.1rem;
-      font-weight: 800;
+      font-weight: 600;
       text-decoration: none;
       color: var(--fg);
-      letter-spacing: -0.5px;
     }
 
     .nav-links {
@@ -128,612 +80,213 @@
     .nav-links a {
       text-decoration: none;
       color: var(--fg-muted);
-      font-size: 0.85rem;
-      font-weight: 500;
+      font-size: 0.875rem;
       transition: color 0.15s;
     }
 
     .nav-links a:hover { color: var(--accent); }
 
-    .nav-cta {
-      background: var(--fg);
-      color: var(--bg) !important;
-      padding: 8px 16px;
-      font-weight: 600;
-      border: var(--border-w) solid var(--border);
-      box-shadow: var(--shadow-sm);
-      transition: transform 0.1s, box-shadow 0.1s;
-    }
-
-    .nav-cta:hover {
-      transform: translate(-1px, -1px);
-      box-shadow: 5px 5px 0 var(--border);
-    }
-
-    /* ── HERO ────────────────────────────────── */
+    /* HERO */
     .hero {
-      padding: 80px 0 60px;
+      padding: 64px 0 48px;
       text-align: center;
     }
 
-    .hero-badge {
-      display: inline-block;
-      font-family: var(--mono);
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      padding: 6px 14px;
-      border: var(--border-w) solid var(--border);
-      margin-bottom: 24px;
-      background: var(--accent-light);
-    }
-
     .hero h1 {
-      font-size: clamp(2.4rem, 5vw, 4rem);
-      font-weight: 900;
-      line-height: 1.05;
-      letter-spacing: -2px;
-      margin-bottom: 20px;
-      max-width: 700px;
-      margin-left: auto;
-      margin-right: auto;
-    }
-
-    .hero h1 em {
-      font-style: normal;
-      color: var(--accent);
-      text-decoration: underline;
-      text-decoration-thickness: 3px;
-      text-underline-offset: 6px;
+      font-size: clamp(2rem, 4vw, 3rem);
+      font-weight: 600;
+      line-height: 1.15;
+      letter-spacing: -0.5px;
+      margin-bottom: 16px;
     }
 
     .hero p {
-      font-size: 1.15rem;
+      font-size: 1.1rem;
       color: var(--fg-muted);
       max-width: 560px;
-      margin: 0 auto 36px;
-      line-height: 1.7;
+      margin: 0 auto 32px;
+      line-height: 1.6;
     }
 
     .hero-actions {
       display: flex;
-      gap: 16px;
+      gap: 12px;
       justify-content: center;
       flex-wrap: wrap;
     }
 
     .btn {
-      display: inline-block;
       font-family: var(--font);
-      font-size: 0.95rem;
-      font-weight: 700;
+      font-size: 0.875rem;
+      font-weight: 500;
       text-decoration: none;
-      padding: 14px 28px;
-      border: var(--border-w) solid var(--border);
-      box-shadow: var(--shadow);
-      transition: transform 0.1s, box-shadow 0.1s;
+      padding: 10px 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       cursor: pointer;
-    }
-
-    .btn:hover {
-      transform: translate(-2px, -2px);
-      box-shadow: 6px 6px 0 var(--border);
-    }
-
-    .btn:active {
-      transform: translate(2px, 2px);
-      box-shadow: 0 0 0 var(--border);
+      transition: background 0.15s, border-color 0.15s;
     }
 
     .btn-primary {
       background: var(--accent);
       color: #fff;
+      border-color: var(--accent);
     }
+
+    .btn-primary:hover { background: var(--accent-hover); border-color: var(--accent-hover); }
 
     .btn-secondary {
       background: var(--bg);
       color: var(--fg);
     }
 
+    .btn-secondary:hover { background: var(--bg-alt); }
+
     .hero-install {
-      margin-top: 40px;
+      margin-top: 32px;
       font-family: var(--mono);
-      font-size: 1rem;
-      padding: 14px 24px;
+      font-size: 0.875rem;
+      padding: 12px 20px;
       background: var(--bg-alt);
-      border: var(--border-w) solid var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       display: inline-block;
-      box-shadow: var(--shadow-sm);
     }
 
-    .hero-install .prompt {
-      color: var(--accent);
-      margin-right: 8px;
-    }
+    .hero-install .prompt { color: var(--accent); margin-right: 8px; }
 
-    /* ── SOCIAL PROOF ────────────────────────── */
-    .social-proof {
-      padding: 40px 0;
-      text-align: center;
-      border-bottom: var(--border-w) solid var(--border);
-    }
+    /* SECTION */
+    .section { padding: 48px 0; }
 
-    .stats {
-      display: flex;
-      justify-content: center;
-      gap: 48px;
-      flex-wrap: wrap;
-    }
-
-    .stat {
-      text-align: center;
-    }
-
-    .stat-number {
-      font-size: 2rem;
-      font-weight: 900;
-      letter-spacing: -1px;
-    }
-
-    .stat-label {
-      font-size: 0.8rem;
-      color: var(--fg-muted);
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      margin-top: 4px;
-    }
-
-    /* ── SECTION HEADERS ────────────────────── */
-    .section {
-      padding: 80px 0;
-    }
-
-    .section-header {
-      text-align: center;
-      margin-bottom: 48px;
-    }
-
-    .section-label {
-      font-family: var(--mono);
-      font-size: 0.7rem;
-      text-transform: uppercase;
-      letter-spacing: 2px;
-      color: var(--accent);
-      margin-bottom: 12px;
-    }
+    .section-header { margin-bottom: 32px; }
 
     .section-header h2 {
-      font-size: clamp(1.8rem, 3vw, 2.5rem);
-      font-weight: 900;
-      letter-spacing: -1px;
-      margin-bottom: 16px;
+      font-size: 1.5rem;
+      font-weight: 600;
+      margin-bottom: 8px;
     }
 
     .section-header p {
       color: var(--fg-muted);
-      max-width: 540px;
-      margin: 0 auto;
-      font-size: 1.05rem;
+      font-size: 0.95rem;
     }
 
-    /* ── PROBLEM ─────────────────────────────── */
-    .problem {
-      background: var(--bg-alt);
-      border-top: var(--border-w) solid var(--border);
-      border-bottom: var(--border-w) solid var(--border);
-    }
-
-    .problem-grid {
+    /* BENTO GRID */
+    .bento {
       display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-      margin-top: 40px;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 16px;
     }
 
-    .problem-card {
-      border: var(--border-w) solid var(--border);
-      padding: 28px;
-      box-shadow: var(--shadow-sm);
+    .bento-card {
+      padding: 20px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
       background: var(--bg);
     }
 
-    .problem-card h3 {
-      font-size: 1.1rem;
-      font-weight: 800;
-      margin-bottom: 10px;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .problem-card p {
-      font-size: 0.9rem;
-      color: var(--fg-muted);
-      line-height: 1.6;
-    }
-
-    .problem-icon {
-      font-size: 1.3rem;
-    }
-
-    /* ── FEATURES ────────────────────────────── */
-    .features-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-      gap: 24px;
-    }
-
-    .feature-card {
-      border: var(--border-w) solid var(--border);
-      padding: 32px;
-      box-shadow: var(--shadow);
-      background: var(--bg);
-      transition: transform 0.15s, box-shadow 0.15s;
-    }
-
-    .feature-card:hover {
-      transform: translate(-2px, -2px);
-      box-shadow: 6px 6px 0 var(--border);
-    }
-
-    .feature-icon {
-      font-size: 1.8rem;
-      margin-bottom: 16px;
-      display: block;
-    }
-
-    .feature-card h3 {
-      font-size: 1.15rem;
-      font-weight: 800;
-      margin-bottom: 8px;
-    }
-
-    .feature-card p {
-      font-size: 0.9rem;
-      color: var(--fg-muted);
-      line-height: 1.6;
-    }
-
-    .feature-tag {
-      display: inline-block;
-      font-family: var(--mono);
-      font-size: 0.65rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      padding: 4px 10px;
-      border: var(--border-w) solid var(--border);
-      margin-top: 14px;
-      background: var(--accent-light);
-    }
-
-    /* ── HOW IT WORKS ────────────────────────── */
-    .how-it-works {
-      background: var(--bg-alt);
-      border-top: var(--border-w) solid var(--border);
-      border-bottom: var(--border-w) solid var(--border);
-    }
-
-    .steps {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-      gap: 32px;
-      margin-top: 48px;
-    }
-
-    .step {
-      text-align: center;
-    }
-
-    .step-number {
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      width: 48px;
-      height: 48px;
-      font-size: 1.3rem;
-      font-weight: 900;
-      border: var(--border-w) solid var(--border);
-      box-shadow: var(--shadow-sm);
-      margin-bottom: 16px;
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .step h3 {
+    .bento-card h3 {
       font-size: 1rem;
-      font-weight: 800;
+      font-weight: 600;
       margin-bottom: 8px;
     }
 
-    .step p {
-      font-size: 0.85rem;
+    .bento-card p {
+      font-size: 0.875rem;
       color: var(--fg-muted);
       line-height: 1.5;
     }
 
-    .step code {
+    .bento-card code {
       font-family: var(--mono);
       font-size: 0.8rem;
-      background: var(--bg);
-      padding: 2px 8px;
-      border: 1px solid var(--border);
-      display: inline-block;
-      margin-top: 8px;
+      background: var(--bg-alt);
+      padding: 2px 6px;
+      border-radius: 2px;
     }
 
-    /* ── COMMANDS TABLE ──────────────────────── */
-    .commands-section {
-      padding: 80px 0;
-    }
-
-    .commands-table {
+    /* COMMANDS */
+    .commands {
       width: 100%;
       border-collapse: collapse;
-      border: var(--border-w) solid var(--border);
-      box-shadow: var(--shadow);
-      font-size: 0.9rem;
-      margin-top: 32px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 0.875rem;
+      margin-top: 24px;
     }
 
-    .commands-table th,
-    .commands-table td {
-      padding: 14px 18px;
+    .commands th, .commands td {
+      padding: 12px 16px;
       text-align: left;
       border-bottom: 1px solid var(--border);
     }
 
-    .commands-table th {
-      font-weight: 800;
+    .commands th {
+      font-weight: 600;
+      font-size: 0.75rem;
       text-transform: uppercase;
-      font-size: 0.7rem;
-      letter-spacing: 1.5px;
-      background: var(--fg);
-      color: var(--bg);
-    }
-
-    .commands-table tr:last-child td {
-      border-bottom: none;
-    }
-
-    .commands-table tr:nth-child(even) td {
+      letter-spacing: 0.5px;
       background: var(--bg-alt);
     }
 
-    .commands-table code {
+    .commands tr:last-child td { border-bottom: none; }
+
+    .commands code {
       font-family: var(--mono);
       font-size: 0.8rem;
-      background: var(--accent-light);
-      padding: 2px 8px;
-      border: 1px solid var(--border);
     }
 
-    .badge-free {
-      display: inline-block;
-      font-family: var(--mono);
-      font-size: 0.6rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      padding: 3px 8px;
-      border: 1px solid #22c55e;
-      color: #16a34a;
-      font-weight: 700;
-    }
-
-    .badge-llm {
-      display: inline-block;
-      font-family: var(--mono);
-      font-size: 0.6rem;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-      padding: 3px 8px;
-      border: 1px solid var(--accent);
-      color: var(--accent);
-      font-weight: 700;
-    }
-
-    /* ── SECURITY ────────────────────────────── */
-    .security {
-      background: var(--bg-alt);
-      border-top: var(--border-w) solid var(--border);
-      border-bottom: var(--border-w) solid var(--border);
-    }
-
+    /* SECURITY */
     .security-grid {
-      display: grid;
-      grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-      gap: 20px;
-      margin-top: 40px;
-    }
-
-    .security-item {
-      border: var(--border-w) solid var(--border);
-      padding: 24px;
-      box-shadow: var(--shadow-sm);
-      background: var(--bg);
-    }
-
-    .security-item h4 {
-      font-size: 0.95rem;
-      font-weight: 800;
-      margin-bottom: 8px;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .security-item p {
-      font-size: 0.82rem;
-      color: var(--fg-muted);
-      line-height: 1.5;
-    }
-
-    /* ── IDE ─────────────────────────────────── */
-    .ide-grid {
       display: grid;
       grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
       gap: 16px;
-      margin-top: 40px;
+      margin-top: 24px;
     }
 
-    .ide-card {
-      border: var(--border-w) solid var(--border);
-      padding: 20px;
-      text-align: center;
-      box-shadow: var(--shadow-sm);
-      background: var(--bg);
+    .security-item {
+      padding: 16px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
     }
 
-    .ide-card h4 {
-      font-size: 0.95rem;
-      font-weight: 800;
+    .security-item h4 {
+      font-size: 0.875rem;
+      font-weight: 600;
       margin-bottom: 4px;
     }
 
-    .ide-card p {
-      font-size: 0.78rem;
-      color: var(--fg-muted);
-    }
-
-    .ide-card code {
-      font-family: var(--mono);
-      font-size: 0.75rem;
-      display: block;
-      margin-top: 10px;
-      padding: 6px;
-      background: var(--bg-alt);
-      border: 1px solid var(--border);
-      word-break: break-all;
-    }
-
-    /* ── QUOTE ───────────────────────────────── */
-    .quote-section {
-      padding: 80px 0;
-      text-align: center;
-    }
-
-    .quote {
-      font-size: 1.5rem;
-      font-weight: 700;
-      line-height: 1.5;
-      max-width: 600px;
-      margin: 0 auto 16px;
-      letter-spacing: -0.5px;
-    }
-
-    .quote::before { content: '"'; }
-    .quote::after { content: '"'; }
-
-    .quote-attr {
-      font-size: 0.85rem;
-      color: var(--fg-muted);
-      font-style: italic;
-    }
-
-    /* ── CTA ─────────────────────────────────── */
-    .cta {
-      padding: 80px 0;
-      text-align: center;
-      background: var(--fg);
-      color: var(--bg);
-      border-top: var(--border-w) solid var(--border);
-    }
-
-    .cta h2 {
-      font-size: clamp(1.8rem, 3vw, 2.5rem);
-      font-weight: 900;
-      letter-spacing: -1px;
-      margin-bottom: 16px;
-    }
-
-    .cta p {
-      color: var(--bg-alt);
-      font-size: 1.05rem;
-      max-width: 500px;
-      margin: 0 auto 32px;
-    }
-
-    .cta .btn-primary {
-      background: var(--accent);
-      color: #fff;
-    }
-
-    .cta .hero-install {
-      margin-top: 32px;
-      background: #1a2332;
-      color: var(--bg);
-      border-color: var(--bg);
-    }
-
-    .cta .hero-install .prompt {
-      color: var(--accent);
-    }
-
-    /* ── FOOTER ──────────────────────────────── */
-    footer {
-      padding: 40px 0;
-      border-top: var(--border-w) solid var(--border);
-      text-align: center;
-    }
-
-    footer .container {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      gap: 16px;
-    }
-
-    .footer-links {
-      display: flex;
-      gap: 24px;
-      list-style: none;
-    }
-
-    .footer-links a {
-      text-decoration: none;
-      color: var(--fg-muted);
+    .security-item p {
       font-size: 0.8rem;
-      font-weight: 500;
+      color: var(--fg-muted);
+      line-height: 1.5;
     }
 
-    .footer-links a:hover { color: var(--accent); }
+    /* FOOTER */
+    footer {
+      padding: 32px 0;
+      border-top: 1px solid var(--border);
+      text-align: center;
+    }
 
-    .footer-copy {
-      font-size: 0.75rem;
+    footer p {
+      font-size: 0.8rem;
       color: var(--fg-muted);
     }
 
-    /* ── RESPONSIVE ──────────────────────────── */
+    footer a { color: var(--accent); text-decoration: none; }
+
+    /* RESPONSIVE */
     @media (max-width: 768px) {
+      .bento { grid-template-columns: 1fr; }
       .nav-links { display: none; }
-      .hero { padding: 50px 0 40px; }
-      .hero h1 { letter-spacing: -1px; }
-      .stats { gap: 24px; }
-      .commands-table { font-size: 0.8rem; }
-      .commands-table th,
-      .commands-table td { padding: 10px 12px; }
-      .cta { padding: 50px 0; }
-      .footer-links { flex-wrap: wrap; justify-content: center; }
+      .hero { padding: 40px 0 32px; }
     }
 
     @media (max-width: 480px) {
       .hero-actions { flex-direction: column; align-items: center; }
-      .hero-install { font-size: 0.85rem; }
-      .section { padding: 50px 0; }
+      .section { padding: 32px 0; }
     }
-
-    /* ── ANIMATIONS ──────────────────────────── */
-    @keyframes fade-in {
-      from { opacity: 0; transform: translateY(20px); }
-      to { opacity: 1; transform: translateY(0); }
-    }
-
-    .fade-in {
-      animation: fade-in 0.6s ease-out both;
-    }
-
-    .fade-in-delay-1 { animation-delay: 0.1s; }
-    .fade-in-delay-2 { animation-delay: 0.2s; }
-    .fade-in-delay-3 { animation-delay: 0.3s; }
   </style>
 </head>
 <body>
@@ -744,10 +297,9 @@
       <a href="/" class="nav-brand">soloknuckle</a>
       <ul class="nav-links">
         <li><a href="#features">Features</a></li>
-        <li><a href="#how-it-works">How It Works</a></li>
         <li><a href="#commands">Commands</a></li>
         <li><a href="#security">Security</a></li>
-        <li><a href="#get-started" class="nav-cta">Get Started</a></li>
+        <li><a href="#get-started">Get Started</a></li>
       </ul>
     </div>
   </nav>
@@ -755,80 +307,14 @@
   <!-- HERO -->
   <section class="hero">
     <div class="container">
-      <div class="hero-badge">Open Source &middot; ISC Licensed &middot; 441 Tests Passing</div>
-      <h1 class="fade-in">Stop shipping code<br>that <em>breaks in prod</em></h1>
-      <p class="fade-in fade-in-delay-1">Soloknuckle catches the bugs that AI leaves behind — secrets in code, destructive commands, flaky tests, and 100% coverage that catches 4% of bugs. One command. Zero config. Runs on your machine, not someone else's cloud.</p>
-      <div class="hero-actions fade-in fade-in-delay-2">
-        <a href="#get-started" class="btn btn-primary">Get Started Free</a>
-        <a href="#features" class="btn btn-secondary">See Features</a>
+      <h1>Catch secrets. Block dangerous commands. Score your tests.</h1>
+      <p>Before you push. Local-first. No surveillance. No tracking.</p>
+      <div class="hero-actions">
+        <a href="#get-started" class="btn btn-primary">Get Started</a>
+        <a href="https://github.com/soch-ship-it/soloknuckle" class="btn btn-secondary">View on GitHub</a>
       </div>
-      <div class="hero-install fade-in fade-in-delay-3">
+      <div class="hero-install">
         <span class="prompt">$</span>npx soloknuckle init
-      </div>
-    </div>
-  </section>
-
-  <!-- SOCIAL PROOF -->
-  <section class="social-proof">
-    <div class="container">
-      <div class="stats">
-        <div class="stat">
-          <div class="stat-number">13</div>
-          <div class="stat-label">Hygiene Dimensions</div>
-        </div>
-        <div class="stat">
-          <div class="stat-number">7</div>
-          <div class="stat-label">Domain Scorecard</div>
-        </div>
-        <div class="stat">
-          <div class="stat-number">4</div>
-          <div class="stat-label">Hard Gates</div>
-        </div>
-        <div class="stat">
-          <div class="stat-number">441</div>
-          <div class="stat-label">Tests Passing</div>
-        </div>
-        <div class="stat">
-          <div class="stat-number">$0</div>
-          <div class="stat-label">Forever</div>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- DIFFERENTIATION -->
-  <section class="problem section" id="problem">
-    <div class="container">
-      <div class="section-header">
-        <div class="section-label">Why Soloknuckle</div>
-        <h2>Most tools just lint.<br>Soloknuckle <em>thinks</em>.</h2>
-        <p>The gap between "tests pass" and "production is safe" is where bugs live. Soloknuckle closes it.</p>
-      </div>
-      <div class="problem-grid">
-        <div class="problem-card">
-          <h3><span class="problem-icon">🧬</span> Most tools check coverage. Soloknuckle injects bugs.</h3>
-          <p>100% line coverage catches 4% of bugs. Soloknuckle's mutation testing breaks your code on purpose — then checks if your tests notice. If they don't, you know before production does.</p>
-        </div>
-        <div class="problem-card">
-          <h3><span class="problem-icon">🤖</span> Most tools scan code. Soloknuckle knows who wrote it.</h3>
-          <p>AI-generated commits have different failure modes than human ones. Soloknuckle detects AI-authored code, tracks acceptance rates, and quarantines repeated offenders — so you review the right things.</p>
-        </div>
-        <div class="problem-card">
-          <h3><span class="problem-icon">🛡️</span> Most tools warn. Soloknuckle blocks.</h3>
-          <p>Linters suggest. Soloknuckle enforces. Hard gates on security, testing, reliability, and supply chain fail CI with exit code 1 in strict mode — so bad code can't silently merge.</p>
-        </div>
-        <div class="problem-card">
-          <h3><span class="problem-icon">🔗</span> Most tools trust dependencies. Soloknuckle doesn't.</h3>
-          <p>Soloknuckle scans your dependency tree for typosquatted and known-hostile packages, and verifies your lockfile is intact so installs stay reproducible.</p>
-        </div>
-        <div class="problem-card">
-          <h3><span class="problem-icon">🔍</span> Most tools match patterns. Soloknuckle checks behavior.</h3>
-          <p>Regex flags are the floor, not the ceiling. Soloknuckle pairs secret scanning with checks for real behavior — mutation testing, contract checks, and build-time busting — so "tests pass" actually means the code still behaves.</p>
-        </div>
-        <div class="problem-card">
-          <h3><span class="problem-icon">💰</span> Most tools count tests. Soloknuckle counts failures.</h3>
-          <p>Soloknuckle runs pattern analysis across your test suite to flag likely-flaky tests, and its hygiene gates are prescriptive about failure — not just counting what ran.</p>
-        </div>
       </div>
     </div>
   </section>
@@ -837,204 +323,59 @@
   <section class="section" id="features">
     <div class="container">
       <div class="section-header">
-        <div class="section-label">Features</div>
-        <h2>Everything you need<br>to ship safely.</h2>
-        <p>13 dimensions of production hygiene, one command away.</p>
+        <h2>Three checks. One score.</h2>
+        <p>Everything a solo developer needs before pushing code.</p>
       </div>
-      <div class="features-grid">
-        <div class="feature-card">
-          <span class="feature-icon">🛡️</span>
-          <h3>Sleep without fear</h3>
-          <p>Catches leaked API keys, tokens, and credentials before they hit git history. No more 3am revocation scrambles.</p>
-          <span class="feature-tag">Core</span>
+      <div class="bento">
+        <div class="bento-card">
+          <h3>Secrets</h3>
+          <p>Scans staged diffs for API keys, tokens, and credentials before they hit git history.</p>
+          <code>npx soloknuckle secrets</code>
         </div>
-        <div class="feature-card">
-          <span class="feature-icon">🔥</span>
-          <h3>Mistake-proof deploys</h3>
-          <p>Blocks <code>rm -rf</code>, <code>git push --force</code>, SQL drops, and <code>chmod 777</code> before they execute. Human error becomes non-fatal.</p>
-          <span class="feature-tag">Core</span>
+        <div class="bento-card">
+          <h3>Firewall</h3>
+          <p>Blocks dangerous shell commands. Suggests safer alternatives.</p>
+          <code>npx soloknuckle intercept "rm -rf /"</code>
         </div>
-        <div class="feature-card">
-          <span class="feature-icon">🤖</span>
-          <h3>Know who wrote what</h3>
-          <p>Flags likely AI-generated commits using heuristics so you can review them separately. Track the human-vs-AI ratio over time.</p>
-          <span class="feature-tag">Intelligence</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">📊</span>
-          <h3>See your blind spots</h3>
-          <p>One number (0–100) across 13 dimensions tells you exactly where your project is fragile — and what to fix first.</p>
-          <span class="feature-tag">Analytics</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🧠</span>
-          <h3>Ship AI code you trust</h3>
-          <p>LLM-powered review of uncommitted changes catches what linters miss — logic gaps, security risks, and rule violations.</p>
-          <span class="feature-tag">AI-Powered</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">💰</span>
-          <h3>Stop runaway spend</h3>
-          <p>Hard limits on API calls, edits, and deploys per day. Prevents a single rogue agent from burning your quota.</p>
-          <span class="feature-tag">Governance</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🔄</span>
-          <h3>Auto-recover from bad deploys</h3>
-          <p>Monitors Sentry and Vercel/Railway health checks, auto-reverts when things go wrong. You don't have to watch the dashboard.</p>
-          <span class="feature-tag">Reliability</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🔌</span>
-          <h3>Agents that self-check</h3>
-          <p>8 MCP tools let your AI coding agents score, audit, and validate their own changes before they touch your codebase.</p>
-          <span class="feature-tag">Integration</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🎨</span>
-          <h3>Health at a glance</h3>
-          <p>Visual dashboard shows project health, command firewall logs, and telemetry trends — run locally, no cloud dependency.</p>
-          <span class="feature-tag">Interface</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🧬</span>
-          <h3>Prove your tests work</h3>
-          <p>Mutation testing injects real bugs and verifies your tests catch them — not just that they pass.</p>
-          <span class="feature-tag">Unique</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🔍</span>
-          <h3>Catch AI test blind spots</h3>
-          <p>Spots when generated tests share the same gaps — missing mocks, absent assertions, hardcoded values that mask bugs.</p>
-          <span class="feature-tag">Unique</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">📋</span>
-          <h3>Contract mismatches caught early</h3>
-          <p>Extracts function signatures and validates test calls match — catching wrong parameters before they hit CI.</p>
-          <span class="feature-tag">Unique</span>
-        </div>
-        <div class="feature-card">
-          <span class="feature-icon">🔥</span>
-          <h3>Kill flaky tests for good</h3>
-          <p>Pattern analysis and multi-run detection identify intermittent failures. Estimates the real cost: ~$100/flaky test/month in wasted time.</p>
-          <span class="feature-tag">Unique</span>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- HOW IT WORKS -->
-  <section class="how-it-works section" id="how-it-works">
-    <div class="container">
-      <div class="section-header">
-        <div class="section-label">How It Works</div>
-        <h2>Three commands.<br>Zero configuration.</h2>
-        <p>From install to protected in under a minute.</p>
-      </div>
-      <div class="steps">
-        <div class="step">
-          <div class="step-number">1</div>
-          <h3>Initialize</h3>
-          <p>Scaffolds AGENTS.md, git hooks, IDE rules, and MCP config into your project.</p>
-          <code>npx soloknuckle init</code>
-        </div>
-        <div class="step">
-          <div class="step-number">2</div>
-          <h3>Check</h3>
-          <p>Runs 13 hygiene dimensions across 7 domains. Shows human-friendly report with scores, issues, and fix suggestions.</p>
+        <div class="bento-card">
+          <h3>Health</h3>
+          <p>One score (0-100). Lint, tests, secrets, dependencies.</p>
           <code>npx soloknuckle check</code>
-        </div>
-        <div class="step">
-          <div class="step-number">3</div>
-          <h3>Enforce</h3>
-          <p>Hard gates block merges when security, testing, reliability, or supply chain fall below thresholds. Perfect for CI/CD.</p>
-          <code>npx soloknuckle check --strict</code>
         </div>
       </div>
     </div>
   </section>
 
   <!-- COMMANDS -->
-  <section class="commands-section" id="commands">
+  <section class="section" id="commands">
     <div class="container">
       <div class="section-header">
-        <div class="section-label">Commands</div>
-        <h2>One CLI. Thirteen commands.<br>Complete coverage.</h2>
+        <h2>Four commands.</h2>
+        <p>That's all you need.</p>
       </div>
-      <table class="commands-table">
+      <table class="commands">
         <thead>
           <tr>
             <th>Command</th>
             <th>Description</th>
-            <th>Cost</th>
           </tr>
         </thead>
         <tbody>
           <tr>
             <td><code>npx soloknuckle init</code></td>
-            <td>Scaffold AGENTS.md, git hooks, IDE rules, MCP config</td>
-            <td><span class="badge-free">Free</span></td>
+            <td>Scaffold git hooks and AGENTS.md</td>
           </tr>
           <tr>
             <td><code>npx soloknuckle check</code></td>
-            <td>Pre-flight checks: lint, test, typecheck, secret scan</td>
-            <td><span class="badge-free">Free</span></td>
+            <td>Run health check (lint, tests, secrets, deps)</td>
           </tr>
           <tr>
-            <td><code>npx soloknuckle check --fix</code></td>
-            <td>Auto-fix issues (lint, deps, git, CI, docs)</td>
-            <td><span class="badge-free">Free</span></td>
+            <td><code>npx soloknuckle secrets</code></td>
+            <td>Scan git diff for secrets</td>
           </tr>
           <tr>
-            <td><code>npx soloknuckle check --strict</code></td>
-            <td>Enforce hard gates — exit code 1 if any dimension fails</td>
-            <td><span class="badge-free">Free</span></td>
-          </tr>
-          <tr>
-            <td><code>npx soloknuckle score</code></td>
-            <td>Project health score (0–100) across 13 dimensions</td>
-            <td><span class="badge-free">Free</span></td>
-          </tr>
-          <tr>
-            <td><code>npx soloknuckle audit</code></td>
-            <td>LLM reviews uncommitted code against AGENTS.md rules</td>
-            <td><span class="badge-llm">LLM</span></td>
-          </tr>
-          <tr>
-            <td><code>npx soloknuckle pr</code></td>
-            <td>Auto-generate PR description from git diff</td>
-            <td><span class="badge-llm">LLM</span></td>
-          </tr>
-          <tr>
-            <td><code>npx soloknuckle ui</code></td>
-            <td>Launch neo-brutalist web dashboard</td>
-            <td><span class="badge-free">Free</span></td>
-          </tr>
-          <tr>
-            <td><code>npx soloknuckle telemetry</code></td>
-            <td>AI vs human contribution statistics</td>
-            <td><span class="badge-free">Free</span></td>
-          </tr>
-          <tr>
-            <td><code>npx soloknuckle watch</code></td>
-            <td>Rollback daemon + Sentry webhook listener</td>
-            <td><span class="badge-free">Free</span></td>
-          </tr>
-          <tr>
-            <td><code>npx soloknuckle persona</code></td>
-            <td>Generate directory-specific agent rules</td>
-            <td><span class="badge-free">Free</span></td>
-          </tr>
-          <tr>
-            <td><code>npx soloknuckle sbom</code></td>
-            <td>Generate CycloneDX SBOM for compliance</td>
-            <td><span class="badge-free">Free</span></td>
-          </tr>
-          <tr>
-            <td><code>npx soloknuckle compliance</code></td>
-            <td>Self-compliance audit — does Soloknuckle pass its own gates?</td>
-            <td><span class="badge-free">Free</span></td>
+            <td><code>npx soloknuckle intercept &lt;cmd&gt;</code></td>
+            <td>Test if a shell command is safe</td>
           </tr>
         </tbody>
       </table>
@@ -1042,98 +383,43 @@
   </section>
 
   <!-- SECURITY -->
-  <section class="security section" id="security">
+  <section class="section" id="security">
     <div class="container">
       <div class="section-header">
-        <div class="section-label">Security</div>
-        <h2>Privacy-first by design.</h2>
-        <p>Your code never leaves your machine. Ever.</p>
+        <h2>Local-first. No surveillance.</h2>
+        <p>Your code never leaves your machine.</p>
       </div>
       <div class="security-grid">
         <div class="security-item">
-          <h4>🏠 Local First</h4>
-          <p>Nothing leaves your machine unless you run an LLM command (audit, pr) with a configured provider. Config lives in <code>~/.soloknuckle/</code>; per-project data in <code>.soloknuckle/</code>.</p>
+          <h4>Local First</h4>
+          <p>Nothing leaves your machine. All checks run locally.</p>
         </div>
         <div class="security-item">
-          <h4>🔐 No PII Collection</h4>
-          <p>No names, emails, or usage data collected. Your identity is nobody's business.</p>
+          <h4>No Tracking</h4>
+          <p>No telemetry. No analytics. No phone-home.</p>
         </div>
         <div class="security-item">
-          <h4>📦 npm Provenance</h4>
-          <p>Every publish is cryptographically tied to the source commit via OIDC. Verify the package came from this repo.</p>
+          <h4>Open Source</h4>
+          <p>Read every line of code. ISC licensed.</p>
         </div>
         <div class="security-item">
-          <h4>🚫 No Automated Publishing</h4>
-          <p>All releases are manual. No CI tokens that could be stolen. 2FA required with hardware security key.</p>
-        </div>
-        <div class="security-item">
-          <h4>🔍 Supply Chain Safe</h4>
-          <p><code>ignore-scripts=true</code> blocks malicious install scripts. <code>min-package-age=72h</code> prevents typosquatting.</p>
-        </div>
-        <div class="security-item">
-          <h4>🛡️ Rate Limiting</h4>
-          <p>CORS restricted to localhost. Body size limits prevent memory exhaustion. LLM endpoints protected.</p>
+          <h4>Transparent</h4>
+          <p>Deterministic. Same input, same output, every time.</p>
         </div>
       </div>
     </div>
   </section>
 
-  <!-- IDE INTEGRATION -->
-  <section class="section" id="ide">
-    <div class="container">
-      <div class="section-header">
-        <div class="section-label">IDE Integration</div>
-        <h2>Works where you code.</h2>
-        <p>Auto-detected config for every major AI coding tool.</p>
-      </div>
-      <div class="ide-grid">
-        <div class="ide-card">
-          <h4>Cursor</h4>
-          <p>Auto-detected</p>
-          <code>.cursorrules</code>
-        </div>
-        <div class="ide-card">
-          <h4>Windsurf</h4>
-          <p>Auto-detected</p>
-          <code>.windsurfrules</code>
-        </div>
-        <div class="ide-card">
-          <h4>Claude Code</h4>
-          <p>Auto-detected</p>
-          <code>SKILL.md</code>
-        </div>
-        <div class="ide-card">
-          <h4>Replit</h4>
-          <p>Auto-detected</p>
-          <code>.replit</code>
-        </div>
-        <div class="ide-card">
-          <h4>Any IDE</h4>
-          <p>Copy this prompt:</p>
-          <code>Read AGENTS.md first. Run npx soloknuckle capabilities.</code>
-        </div>
-      </div>
-    </div>
-  </section>
-
-  <!-- QUOTE -->
-  <section class="quote-section">
-    <div class="container">
-      <p class="quote">Treat production like a hospital operating room.</p>
-      <p class="quote-attr">— from AGENTS.md</p>
-    </div>
-  </section>
-
-  <!-- CTA -->
-  <section class="cta" id="get-started">
-    <div class="container">
-      <h2>Ship code that doesn't<br>wake you up at 3am</h2>
-      <p>One command. All 13 dimensions. Hard gates that actually block bad code.</p>
+  <!-- GET STARTED -->
+  <section class="section" id="get-started">
+    <div class="container" style="text-align: center;">
+      <h2 style="font-size: 1.5rem; font-weight: 600; margin-bottom: 16px;">Get Started</h2>
       <div class="hero-install">
         <span class="prompt">$</span>npx soloknuckle init
       </div>
-      <p style="margin-top:20px;font-size:0.9rem;color:var(--bg-alt);">
-        <a href="https://github.com/soch-ship-it/soloknuckle" style="color:var(--accent);text-decoration:none;">View on GitHub</a> &middot; ISC License &middot; Zero config
+      <p style="margin-top: 16px; font-size: 0.875rem; color: var(--fg-muted);">
+        <a href="https://github.com/soch-ship-it/soloknuckle" style="color: var(--accent); text-decoration: none;">View on GitHub</a>
+        &middot; ISC License &middot; Zero config
       </p>
     </div>
   </section>
@@ -1141,13 +427,13 @@
   <!-- FOOTER -->
   <footer>
     <div class="container">
-      <ul class="footer-links">
-        <li><a href="https://www.npmjs.com/package/soloknuckle">npm</a></li>
-        <li><a href="https://github.com/soch-ship-it/soloknuckle#readme">Documentation</a></li>
-        <li><a href="https://github.com/soch-ship-it/soloknuckle/blob/main/SECURITY.md">Security</a></li>
-        <li><a href="https://github.com/soch-ship-it/soloknuckle/blob/main/LICENSE">License</a></li>
-      </ul>
-      <p class="footer-copy">Soloknuckle &middot; ISC License &middot; Built for the AI era</p>
+      <p>
+        <a href="https://github.com/soch-ship-it/soloknuckle">GitHub</a> &middot;
+        <a href="https://www.npmjs.com/package/soloknuckle">npm</a> &middot;
+        <a href="SECURITY.md">Security</a> &middot;
+        <a href="MCP-INTEGRATION.md">MCP Integration</a>
+      </p>
+      <p style="margin-top: 8px;">Soloknuckle &middot; ISC License &middot; Built for solo developers</p>
     </div>
   </footer>
 

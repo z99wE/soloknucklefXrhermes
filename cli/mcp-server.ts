@@ -1,14 +1,7 @@
 #!/usr/bin/env node
 
-import { calculateMetrics, generateSuggestions } from './scorer';
-import { getTelemetry } from './telemetry';
-import { interceptCommand } from './interceptor';
-import { scanDiffForSecretsAndPII } from './scanner';
-import { SupplyChainSentinel } from './supply-chain-sentinel';
+import { scanSecrets, interceptCommand, calculateHealth, getGitDiff } from './core';
 import { getVersion } from './path-utils';
-import { execSync } from 'child_process';
-import fs from 'fs';
-import path from 'path';
 
 interface MCPRequest {
   jsonrpc: '2.0';
@@ -26,18 +19,19 @@ interface MCPResponse {
 
 const TOOLS = [
   {
-    name: 'soloknuckle_score',
-    description: 'Get the full production hygiene score for the current project. Returns overall score (0-100) and per-category breakdowns for quality, testing, security, efficiency, and accessibility.',
-    inputSchema: { type: 'object' as const, properties: {}, required: [] as string[] },
-  },
-  {
-    name: 'soloknuckle_telemetry',
-    description: 'Get AI vs human contribution telemetry. Shows how many commits and lines were written by AI vs humans.',
-    inputSchema: { type: 'object' as const, properties: {}, required: [] as string[] },
+    name: 'soloknuckle_secrets',
+    description: 'Scan a git diff for secrets, API keys, tokens, and credentials. Pass empty string to scan staged/unstaged diff.',
+    inputSchema: {
+      type: 'object' as const,
+      properties: {
+        diff: { type: 'string', description: 'The diff text to scan. Empty string scans the current git diff.' },
+      },
+      required: [] as string[],
+    },
   },
   {
     name: 'soloknuckle_intercept',
-    description: 'Check if a shell command is safe or destructive. Returns whether the command would be blocked by the firewall and why.',
+    description: 'Check if a shell command is safe or destructive. Returns whether the command would be blocked and why, with a suggestion for safer alternatives.',
     inputSchema: {
       type: 'object' as const,
       properties: {
@@ -47,53 +41,9 @@ const TOOLS = [
     },
   },
   {
-    name: 'soloknuckle_secrets',
-    description: 'Scan a git diff for secrets, API keys, tokens, and PII. Pass empty string to scan staged/unstaged diff.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        diff: { type: 'string', description: 'The diff text to scan. Empty string scans the current git diff.' },
-      },
-      required: ['diff'],
-    },
-  },
-  {
-    name: 'soloknuckle_flags',
-    description: 'Read the current feature flags from flags.json. Returns all flags and their enabled/disabled state.',
+    name: 'soloknuckle_health',
+    description: 'Get the project health score (0-100) with actionable issues. Checks lint, tests, secrets, and dependencies.',
     inputSchema: { type: 'object' as const, properties: {}, required: [] as string[] },
-  },
-  {
-    name: 'soloknuckle_flag_set',
-    description: 'Enable or disable a feature flag in flags.json.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        name: { type: 'string', description: 'The flag name' },
-        enabled: { type: 'boolean', description: 'true to enable, false to disable' },
-      },
-      required: ['name', 'enabled'],
-    },
-  },
-  {
-    name: 'soloknuckle_suggest',
-    description: 'Use AI to generate improvement suggestions based on the current score metrics. Requires an active LLM provider configured.',
-    inputSchema: { type: 'object' as const, properties: {}, required: [] as string[] },
-  },
-  {
-    name: 'soloknuckle_branches',
-    description: 'List local git branches and their status.',
-    inputSchema: { type: 'object' as const, properties: {}, required: [] as string[] },
-  },
-  {
-    name: 'soloknuckle_supply_chain_sentinel',
-    description: 'Detect supply chain compromise signals: dormant packages with sudden updates, new lifecycle scripts (postinstall/preinstall), typosquatting patterns, and untrusted publishers. Runs npm audit + custom behavioral analysis.',
-    inputSchema: {
-      type: 'object' as const,
-      properties: {
-        depth: { type: 'string', enum: ['quick', 'standard', 'deep'], description: 'Scan depth: quick (lockfile only), standard (+package.json), deep (+registry checks)' },
-      },
-      required: [] as string[],
-    },
   },
 ];
 
@@ -111,8 +61,6 @@ async function handleRequest(req: MCPRequest): Promise<MCPResponse | undefined> 
       };
 
     case 'notifications/initialized':
-      // JSON-RPC notifications must never be answered. Returning undefined
-      // tells the transport layer to stay silent.
       return undefined;
 
     case 'tools/list':
@@ -136,129 +84,21 @@ async function handleToolCall(id: number | string, name: string, args: Record<st
     let result: unknown;
 
     switch (name) {
-      case 'soloknuckle_score': {
-        const metrics = calculateMetrics();
-        result = {
-          overall: metrics.overall,
-          quality: metrics.quality.score,
-          testing: metrics.testing.score,
-          security: metrics.security.score,
-          efficiency: metrics.efficiency.score,
-          accessibility: metrics.accessibility.score,
-          details: {
-            quality: metrics.quality.rawOutput,
-            testing: metrics.testing.rawOutput,
-            security: metrics.security.rawOutput,
-            efficiency: metrics.efficiency.rawOutput,
-            accessibility: metrics.accessibility.rawOutput,
-          },
-        };
-        break;
-      }
-
-      case 'soloknuckle_telemetry': {
-        result = getTelemetry();
+      case 'soloknuckle_secrets': {
+        const diff = String(args.diff || '');
+        const diffToScan = diff || getGitDiff();
+        result = scanSecrets(diffToScan);
         break;
       }
 
       case 'soloknuckle_intercept': {
         const command = String(args.command || '');
-        const outcome = interceptCommand(command);
-        result = { blocked: outcome.blocked, reason: outcome.reason || null };
+        result = interceptCommand(command);
         break;
       }
 
-      case 'soloknuckle_secrets': {
-        const diff = String(args.diff || '');
-        let diffToScan = diff;
-        if (!diff) {
-          try {
-            execSync('git rev-parse --git-dir', { stdio: 'ignore', cwd: process.cwd() });
-            diffToScan = execSync('git diff --cached', { encoding: 'utf-8', cwd: process.cwd(), stdio: 'pipe' });
-            if (!diffToScan) {
-              diffToScan = execSync('git diff', { encoding: 'utf-8', cwd: process.cwd(), stdio: 'pipe' });
-            }
-          } catch {
-            diffToScan = '';
-          }
-        }
-        const violations = scanDiffForSecretsAndPII(diffToScan);
-        result = { clean: violations.length === 0, violations };
-        break;
-      }
-
-      case 'soloknuckle_flags': {
-        const flagsPath = path.join(process.cwd(), 'flags.json');
-        if (fs.existsSync(flagsPath)) {
-          result = JSON.parse(fs.readFileSync(flagsPath, 'utf-8'));
-        } else {
-          result = {};
-        }
-        break;
-      }
-
-      case 'soloknuckle_flag_set': {
-        const flagName = String(args.name || '');
-        const enabled = Boolean(args.enabled);
-        if (!flagName) {
-          return { jsonrpc: '2.0', id, error: { code: -32602, message: 'Missing flag name' } };
-        }
-        const flagsPath = path.join(process.cwd(), 'flags.json');
-        let fileData: Record<string, unknown> = {};
-        if (fs.existsSync(flagsPath)) {
-          fileData = JSON.parse(fs.readFileSync(flagsPath, 'utf-8'));
-        }
-        // Keep the same versioned shape that `check` writes: { $schema, flags, version }.
-        if (fileData.flags && typeof fileData.flags === 'object' && fileData.version !== undefined) {
-          (fileData.flags as Record<string, unknown>)[flagName] = enabled;
-        } else if (fs.existsSync(flagsPath)) {
-          // Legacy/unversioned file — migrate it.
-          const flat = fileData as Record<string, boolean>;
-          const migrated = {
-            $schema: 'https://raw.githubusercontent.com/soch-ship-it/soloknuckle/main/flags-schema.json',
-            flags: { ...flat, [flagName]: enabled },
-            version: 1,
-          };
-          fileData = migrated;
-        } else {
-          fileData = {
-            $schema: 'https://raw.githubusercontent.com/soch-ship-it/soloknuckle/main/flags-schema.json',
-            flags: { [flagName]: enabled },
-            version: 1,
-          };
-        }
-        fs.writeFileSync(flagsPath, JSON.stringify(fileData, null, 2));
-        result = { success: true, flag: flagName, enabled };
-        break;
-      }
-
-      case 'soloknuckle_suggest': {
-        const metrics = calculateMetrics();
-        result = await generateSuggestions(metrics);
-        break;
-      }
-
-      case 'soloknuckle_branches': {
-        try {
-          execSync('git rev-parse --git-dir', { stdio: 'ignore', cwd: process.cwd() });
-          const output = execSync('git branch', { encoding: 'utf-8', cwd: process.cwd(), stdio: 'pipe' });
-          const branches = output.split('\n')
-            .filter(line => line.trim())
-            .map(line => ({
-              name: line.replace(/^\*?\s*/, '').trim(),
-              current: line.startsWith('*'),
-            }));
-          result = branches;
-        } catch {
-          result = [];
-        }
-        break;
-      }
-
-      case 'soloknuckle_supply_chain_sentinel': {
-        const depth = String(args.depth || 'standard');
-        const sentinel = new SupplyChainSentinel();
-        result = sentinel.scan(depth as 'quick' | 'standard' | 'deep');
+      case 'soloknuckle_health': {
+        result = calculateHealth();
         break;
       }
 
@@ -301,13 +141,12 @@ function main() {
       if (!trimmed) continue;
       try {
         const req = JSON.parse(trimmed) as MCPRequest;
-        // Process serially to preserve request/response ordering.
         pending = pending.then(async () => {
           const res = await handleRequest(req);
           if (res) process.stdout.write(JSON.stringify(res) + '\n');
-        }).catch(() => { /* keep transport alive on unexpected errors */ });
+        }).catch(() => {});
       } catch {
-        // Ignore non-JSON lines (MCP uses JSON-RPC, invalid JSON is skipped)
+        // Ignore non-JSON lines
       }
     }
   });
@@ -317,7 +156,6 @@ function main() {
   });
 }
 
-// Run if executed directly (not imported for tests)
 if (require.main === module) {
   main();
 }

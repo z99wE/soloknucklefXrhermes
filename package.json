@@ -1,7 +1,7 @@
 {
   "name": "soloknuckle",
-  "version": "1.3.1",
-  "description": "Production hygiene CLI — pre-flight checks, secret scanning, agent firewall, and rollback daemon for any project.",
+  "version": "5.0.0",
+  "description": "Production hygiene for solo developers — secrets, firewall, health. Local-first, no surveillance.",
   "main": "./dist/cli/index.js",
   "types": "./dist/cli/index.d.ts",
   "engines": {

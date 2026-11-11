@@ -1,17 +1,6 @@
 {
+  "version": 1,
   "flags": {
-    "guard-install": {
-      "enabled": false
-    },
-    "ai-watch": {
-      "enabled": false,
-      "allowlist": [
-        "founder@example.com"
-      ]
-    },
-    "telemetry": {
-      "enabled": true,
-      "rolloutPercent": 100
-    }
+    "alpha": true
   }
 }
