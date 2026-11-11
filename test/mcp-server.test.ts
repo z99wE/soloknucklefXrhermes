@@ -67,7 +67,7 @@ describe('MCP Server', () => {
     it('scans a diff for secrets', async () => {
       const res = await handleRequest({
         jsonrpc: '2.0', id: 1, method: 'tools/call',
-        params: { name: 'soloknuckle_secrets', arguments: { diff: '+AWS_KEY=AKIAIOSFODNN7EXAMPLE' } },
+        params: { name: 'soloknuckle_secrets', arguments: { diff: '+AWS_KEY=AKIAIOSFODNN7EXAMPLE' } }, // soloknuckle:allow
       });
       const content = (res?.result as any)?.content?.[0]?.text;
       const parsed = JSON.parse(content);

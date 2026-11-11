@@ -13,13 +13,13 @@ describe('scanSecrets', () => {
   });
 
   it('detects AWS access key', () => {
-    const result = scanSecrets('+AWS_KEY=AKIAIOSFODNN7EXAMPLE');
+    const result = scanSecrets('+AWS_KEY=AKIAIOSFODNN7EXAMPLE'); // soloknuckle:allow
     expect(result.clean).toBe(false);
     expect(result.violations.length).toBeGreaterThan(0);
   });
 
   it('detects GitHub PAT', () => {
-    const result = scanSecrets('+token = ghp_abcdefghijklmnopqrstuvwxyz1234567890');
+    const result = scanSecrets('+token = ghp_abcdefghijklmnopqrstuvwxyz1234567890'); // soloknuckle:allow
     expect(result.clean).toBe(false);
   });
 
@@ -29,7 +29,7 @@ describe('scanSecrets', () => {
   });
 
   it('only scans additions', () => {
-    const result = scanSecrets('-AWS_KEY=AKIAIOSFODNN7EXAMPLE');
+    const result = scanSecrets('-AWS_KEY=AKIAIOSFODNN7EXAMPLE'); // soloknuckle:allow
     expect(result.clean).toBe(true);
   });
 
@@ -42,7 +42,7 @@ describe('scanSecrets', () => {
   });
 
   it('still ignores a token that is itself a placeholder', () => {
-    const result = scanSecrets('+const key = "sk-mockmockmockmockmockmockmockmockmock";');
+    const result = scanSecrets('+const key = "sk-mockmockmockmockmockmockmockmockmock";'); // soloknuckle:allow
     expect(result.clean).toBe(true);
   });
 
