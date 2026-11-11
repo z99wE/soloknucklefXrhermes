@@ -2,13 +2,13 @@
 
 **Deterministic production hygiene for solo developers** — secret scanning, a command firewall, and a project health gate that run the same way everywhere: in your terminal, in git hooks, in MCP clients, and inside Hermes Agent.
 
-It doesn’t rely on a prompt remembering to be careful. It enforces checks as tools and gates, with one rule set and the same verdict on every surface.
+It doesn’t rely on a prompt remembering to be careful. It turns hygiene into **executable, deterministic checks** with one rule set and the same verdict on every surface.
 
 - **Secrets** — catches credentials entering a diff before they become history
 - **Firewall** — flags or blocks dangerous shell commands before they run
 - **Health** — scores whether a project is actually ready to push/ship
 
-Local-first, deterministic, and quiet by design: no telemetry, no analytics, no network calls, no background state.
+Local-first and quiet by design: no telemetry, no analytics, no network calls, no background state. For Hermes, that means practical guardrails the agent can actually use — without hooks, middleware, or prompt rewriting.
 
 ## Why Soloknuckle
 
@@ -186,9 +186,19 @@ sequenceDiagram
 
 ## Hermes Agent integration
 
-Soloknuckle is a native Hermes plugin — and fully optional on both sides: remove it and Hermes keeps working; skip Hermes and the CLI keeps working. It exposes **real, invocable surfaces** (not just guidance): 3 tools plus redaction, a skill, CLI/slash commands, and a weekly-report blueprint. Every surface is declared in [`hermes-plugin/plugin.yaml`](hermes-plugin/plugin.yaml) and visible in `hermes plugins capabilities`.
+Soloknuckle is a native Hermes plugin — fully optional on both sides: remove it and Hermes keeps working; skip Hermes and the CLI keeps working. It gives Hermes **real, invocable guardrails** (not just guidance): 3 deterministic tools plus additive redaction, a skill, CLI/slash commands, and a weekly-report blueprint. Every surface is declared in [`hermes-plugin/plugin.yaml`](hermes-plugin/plugin.yaml) and visible in `hermes plugins capabilities`.
 
-Crucially, it’s designed to be trustworthy inside an agent: **no hooks, no middleware, no prompt/context rewriting**. `provides_hooks: []` and `provides_middleware: []` are the machine-checkable form of that promise; tools run only when invoked.
+### How it helps Hermes
+
+As agents take on more real work (even in sandboxes/VMs), common failures still happen at the command, diff, and commit level — a pasted credential, a destructive shell one-liner, or pushing an unhealthy change. Soloknuckle helps Hermes handle those moments with checks, not hopes:
+
+- **Deterministic tools the agent can call:** `soloknuckle.secrets` scans diffs for known credential patterns, `soloknuckle.intercept` evaluates a command before it runs, and `soloknuckle.health` scores project readiness — same rules/verdicts as the CLI and hooks.
+- **Less reliance on prompt-only caution:** risky diffs and commands can be checked explicitly (by you, by the agent via tools, or via `/hygiene` / `hermes hygiene`) instead of trusting instructions alone.
+- **Additive transcript redaction:** registers credential patterns to help keep matching secrets out of transcripts (can be disabled via config), without weakening built-in protections.
+- **Easy to invoke where you work:** a bundled skill teaches *when* to check, `/hygiene` and `hermes hygiene` make checks one step away, and a weekly-report blueprint supports routine hygiene.
+- **Safe to install, predictable in behavior:** local/offline, no telemetry, and **no hooks, no middleware, no prompt/context rewriting**. `provides_hooks: []` and `provides_middleware: []` are machine-checkable; tools run only when invoked.
+
+> Scope: Soloknuckle is a lightweight, deterministic guardrail layer (defense-in-depth), not a sandbox or runtime isolation. Its checks are diff/regex and syntax-based by design — fast and explainable, but not a guarantee against every possible secret or attack. See [SECURITY.md](SECURITY.md) and [HERMES-INTEGRATION.md](HERMES-INTEGRATION.md).
 
 ```mermaid
 flowchart TB
