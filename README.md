@@ -32,11 +32,13 @@ curl -fsSL https://raw.githubusercontent.com/z99wE/soloknucklefXrhermes/main/ins
 cd your-project
 soloknuckle init      # scaffold AGENTS.md and safe git hooks
 soloknuckle check     # score the project
-git commit            # the hook now scans the staged diff
+git commit            # the hooks scan the staged diff and commit message
 ```
 
-`init` never overwrites a hook you already have: it moves `pre-commit` to
-`pre-commit.local` and chains it, and running `init` twice is a no-op.
+`init` installs `pre-commit` (secret scan), `commit-msg` (Conventional Commits),
+and `pre-push` (health check), and never overwrites a hook you already have: it
+moves the existing hook to `<hook>.local` and chains it. Running `init` twice is
+a no-op.
 
 ## The three checks
 
@@ -124,7 +126,7 @@ Grades: A ≥ 90, B ≥ 70, C ≥ 40, F below that.
 
 | Command | What it does | Exit codes |
 |---|---|---|
-| `soloknuckle init` | Scaffold `AGENTS.md` and git hooks | 0 |
+| `soloknuckle init` | Scaffold `AGENTS.md` and git hooks (`pre-commit`, `commit-msg`, `pre-push`) | 0 |
 | `soloknuckle check [--min-score N]` | Health score (default gate: 70) | 0 pass, 1 below gate, 2 bad flag |
 | `soloknuckle secrets [diff]` | Scan a diff for credentials | 0 clean, 1 violations |
 | `soloknuckle intercept <cmd...>` | Evaluate a shell command | 0 allowed/caution, 1 blocked |

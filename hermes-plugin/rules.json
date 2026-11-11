@@ -150,6 +150,10 @@
       "reason": "SQL drop",
       "pattern": "\\bDROP\\s+(?:DATABASE|TABLE|SCHEMA)\\b",
       "flags": "i"
+    },
+    {
+      "reason": "Fork bomb",
+      "pattern": ":\\(\\)\\s*\\{[^\\n]*:\\|:\\s*&"
     }
   ],
   "advisory_patterns": [
