@@ -197,7 +197,9 @@ sequenceDiagram
 Soloknuckle is a native Hermes plugin, and it is optional on both sides: remove
 it and Hermes keeps working; skip Hermes and the CLI keeps working. Every surface
 is declared in [`hermes-plugin/plugin.yaml`](hermes-plugin/plugin.yaml) and
-visible in `hermes plugins capabilities`.
+visible in `hermes plugins capabilities`. The agent sees three tools and five
+host surfaces: redaction, a skill, a CLI command, a slash command, and a
+blueprint. Nothing runs unless the user or the agent asks for it.
 
 ```mermaid
 flowchart TB

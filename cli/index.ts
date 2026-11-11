@@ -57,7 +57,7 @@ function hookBody(mode: 'pre-commit' | 'pre-push'): string {
   const runCheck =
     mode === 'pre-commit'
       ? 'run_soloknuckle secrets || exit 1'
-      : 'run_soloknuckle check || echo "soloknuckle: health issues (not blocking this push)"';
+      : 'run_soloknuckle check || { echo "soloknuckle: pre-push check failed (see issues above)"; exit 1; }';
 
   return `#!/usr/bin/env bash
 # ${HOOK_MARKER}. Delete this file to uninstall.

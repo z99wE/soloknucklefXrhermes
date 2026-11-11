@@ -227,30 +227,3 @@ def test_blueprint_kwargs_are_valid():
     # The template must not use braces the validator would treat as slots.
     assert "{" not in kwargs["prompt_template"]
 
-
-class FakeRequest:
-    def __init__(self, body):
-        self.json = body
-
-
-def test_dashboard_bridge_uses_the_same_engine(monkeypatch, tmp_path):
-    """The desktop pane must not grow its own copy of the rules or the git call."""
-    monkeypatch.chdir(tmp_path)
-    from dashboard.plugin_api import SoloknuckleAPI
-
-    api = SoloknuckleAPI()
-    diff = "+AWS_KEY=AKIAIOSFODNN7EXAMPLE"  # soloknuckle:allow
-
-    secrets = api.rest_secrets(FakeRequest({"diff": diff}))
-    assert secrets["ok"] is True
-    assert secrets["data"] == __init__.scan_secrets(diff)
-
-    blocked = api.rest_intercept(FakeRequest({"command": "sudo rm -rf /"}))
-    assert blocked["data"]["blocked"] is True
-
-    missing = api.rest_intercept(FakeRequest({}))
-    assert missing["ok"] is False
-
-    health = api.rest_health(FakeRequest({}))
-    assert health["data"]["score"] == 25  # no package.json in tmp_path
-

@@ -10,8 +10,6 @@ license: ISC
 homepage: https://github.com/z99wE/soloknucklefXrhermes
 manifest_version: 2
 requires_hermes: ">=0.22.0"
-api: dashboard/plugin_api.py
-desktop: true
 tags:
   - security
   - secrets
