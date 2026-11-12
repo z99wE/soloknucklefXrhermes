@@ -68,7 +68,7 @@ def test_calculate_health_generic_failures(tmp_path: Path, monkeypatch: pytest.M
 
     monkeypatch.setattr(core.subprocess, "run", fake_run)
     monkeypatch.setattr(core, "current_git_diff", lambda cwd=None: "")
-    result = core.calculate_health(str(tmp_path))
+    result = core.calculate_health(str(tmp_path), run_project_scripts=True)
     assert "Lint: failed" in result["issues"]
     assert "Tests: failed" in result["issues"]
 

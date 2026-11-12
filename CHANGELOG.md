@@ -36,7 +36,7 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/), and this
 
 ### Added
 
-- **Hermes plugin.** Three tools (`soloknuckle.secrets`, `soloknuckle.intercept`, `soloknuckle.health`) plus native surfaces: seven credential redaction patterns for the transcript redactor, the `soloknuckle:hygiene` skill, `hermes hygiene` CLI, `/hygiene` slash command, and a weekly hygiene report blueprint.
+- **Hermes plugin.** Three tools (`soloknuckle_secrets`, `soloknuckle_intercept`, `soloknuckle_health`) plus native surfaces: credential redaction patterns for the transcript redactor, the `soloknuckle:hygiene` skill, `hermes hygiene` CLI, `/hygiene` slash command, and a weekly hygiene report blueprint. Health project lint/test scripts are opt-in (`health_run_project_scripts`, default `false`) and run with a minimal environment when enabled.
 - **MCP server** (`soloknuckle-mcp`) exposing the same three tools over stdio.
 
 ## [5.0.0] - 2026-10-31

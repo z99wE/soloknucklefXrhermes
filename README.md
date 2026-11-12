@@ -201,7 +201,7 @@ Soloknuckle is a native Hermes plugin — fully optional on both sides: remove i
 
 As agents take on more real work (even in sandboxes/VMs), common failures still happen at the command, diff, and commit level — a pasted credential, a destructive shell one-liner, or pushing an unhealthy change. Soloknuckle helps Hermes handle those moments with checks, not hopes:
 
-- **Deterministic tools the agent can call:** `soloknuckle.secrets` scans diffs for known credential patterns, `soloknuckle.intercept` evaluates a command before it runs, and `soloknuckle.health` scores project readiness — same rules/verdicts as the CLI and hooks.
+- **Deterministic tools the agent can call:** `soloknuckle_secrets` scans diffs for known credential patterns, `soloknuckle_intercept` evaluates a command before it runs, and `soloknuckle_health` scores project readiness — same rules/verdicts as the CLI and hooks. By default `soloknuckle_health` does not run project lint/test scripts (opt-in via `health_run_project_scripts`); when enabled, scripts run with a minimal environment and never inherit Hermes/provider secrets.
 - **Less reliance on prompt-only caution:** risky diffs and commands can be checked explicitly (by you, by the agent via tools, or via `/hygiene` / `hermes hygiene`) instead of trusting instructions alone.
 - **Additive transcript redaction:** registers credential patterns to help keep matching secrets out of transcripts (can be disabled via config), without weakening built-in protections.
 - **Easy to invoke where you work:** a bundled skill teaches *when* to check, `/hygiene` and `hermes hygiene` make checks one step away, and a weekly-report blueprint supports routine hygiene.
@@ -227,7 +227,7 @@ flowchart TB
     engine["Soloknuckle engine<br/>hermes-plugin/core.py"]
 
     terminal -->|"git hooks, CI"| engine
-    session -->|"soloknuckle.secrets<br/>soloknuckle.intercept<br/>soloknuckle.health"| tools
+    session -->|"soloknuckle_secrets<br/>soloknuckle_intercept<br/>soloknuckle_health"| tools
     session -->|"/hygiene"| commandReg
     tools --> engine
     commandReg --> engine
@@ -238,9 +238,9 @@ flowchart TB
 
 | Surface | Type | What it gives you |
 |---|---|---|
-| `soloknuckle.secrets` | tool | Scan a diff for known credential patterns |
-| `soloknuckle.intercept` | tool | Evaluate a command before it runs |
-| `soloknuckle.health` | tool | Score the current project |
+| `soloknuckle_secrets` | tool | Scan a diff for known credential patterns |
+| `soloknuckle_intercept` | tool | Evaluate a command before it runs |
+| `soloknuckle_health` | tool | Score the current project (lint/test scripts opt-in) |
 | Redaction patterns | additive | Helps keep matching credentials out of transcripts |
 | `soloknuckle:hygiene` | skill | Teaches the agent when to run checks |
 | `hermes hygiene` | CLI | `check`, `secrets`, `intercept <cmd>` |

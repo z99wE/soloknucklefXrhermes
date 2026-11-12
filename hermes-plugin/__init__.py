@@ -62,50 +62,70 @@ def _run_intercept(args: Dict[str, Any]) -> str:
     return json.dumps(intercept_command(command))
 
 
-def _run_health(args: Dict[str, Any]) -> str:
-    return json.dumps(calculate_health())
+def _run_health(args: Dict[str, Any], run_project_scripts: bool = False) -> str:
+    return json.dumps(calculate_health(run_project_scripts=run_project_scripts))
 
 
 # ---------------------------------------------------------------------------
 # Registration (called by Hermes at runtime)
 # ---------------------------------------------------------------------------
 def _register_tools(ctx: Any) -> None:
+    try:
+        run_project_scripts = bool(ctx.get_config("health_run_project_scripts", False))
+    except Exception:
+        run_project_scripts = False
+
+    def health_handler(args: Dict[str, Any]) -> str:
+        return _run_health(args, run_project_scripts=run_project_scripts)
+
     ctx.register_tool(
-        name="soloknuckle.secrets",
+        name="soloknuckle_secrets",
         toolset="soloknuckle",
         schema={
-            "type": "object",
-            "properties": {
-                "diff": {
-                    "type": "string",
-                    "description": "Git diff to scan. Empty = auto-scan staged/unstaged.",
-                }
+            "name": "soloknuckle_secrets",
+            "description": "Scan a git diff for API keys, tokens, and credentials.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "diff": {
+                        "type": "string",
+                        "description": "Git diff to scan. Empty = auto-scan staged/unstaged.",
+                    }
+                },
+                "required": [],
             },
-            "required": [],
         },
         handler=_run_secrets,
         description="Scan git diff for API keys, tokens, and credentials",
     )
 
     ctx.register_tool(
-        name="soloknuckle.intercept",
+        name="soloknuckle_intercept",
         toolset="soloknuckle",
         schema={
-            "type": "object",
-            "properties": {
-                "command": {"type": "string", "description": "Shell command to evaluate"}
+            "name": "soloknuckle_intercept",
+            "description": "Evaluate shell command safety. Returns blocked, reason, and suggestion.",
+            "parameters": {
+                "type": "object",
+                "properties": {
+                    "command": {"type": "string", "description": "Shell command to evaluate"}
+                },
+                "required": ["command"],
             },
-            "required": ["command"],
         },
         handler=_run_intercept,
         description="Evaluate shell command safety. Returns blocked/reason/suggestion.",
     )
 
     ctx.register_tool(
-        name="soloknuckle.health",
+        name="soloknuckle_health",
         toolset="soloknuckle",
-        schema={"type": "object", "properties": {}, "required": []},
-        handler=_run_health,
+        schema={
+            "name": "soloknuckle_health",
+            "description": "Report project health score (0-100) with actionable issues. Project lint/test scripts run only if health_run_project_scripts is enabled.",
+            "parameters": {"type": "object", "properties": {}, "required": []},
+        },
+        handler=health_handler,
         description="Project health score (0-100) with actionable issues",
     )
 

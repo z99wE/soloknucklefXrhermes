@@ -16,9 +16,9 @@ tags:
   - hygiene
   - devops
 provides_tools:
-  - soloknuckle.secrets
-  - soloknuckle.intercept
-  - soloknuckle.health
+  - soloknuckle_secrets
+  - soloknuckle_intercept
+  - soloknuckle_health
 provides_hooks: []
 requires_env: []
 config_schema:
@@ -28,3 +28,10 @@ config_schema:
     description: >-
       Add Soloknuckle's credential patterns to Hermes' transcript redactor.
       Additive only — it can never weaken a built-in pattern.
+  health_run_project_scripts:
+    type: bool
+    default: false
+    description: >-
+      Run project lint/test scripts during health checks. Off by default because
+      project scripts execute with side effects; when enabled they run with a
+      minimal environment (PATH/HOME/LANG/NODE_*) and never inherit Hermes secrets.

@@ -178,8 +178,8 @@ export function calculateHealth(root: string = process.cwd()): HealthResult {
   // 2. Lint check — only inside an npm project: without a local package.json
   // `npm` walks up to a parent directory and lints someone else's repository.
   // Run the project's own script (side effects by definition) with no shell and
-  // explicit timeouts; it inherits the user's environment because the script may
-  // legitimately depend on it.
+  // explicit timeouts, using a minimal environment (never inheriting secrets).
+  const env = minimalEnv();
   if (!hasPackageJson) {
     issues.push('Lint: no package.json');
   } else {
@@ -189,7 +189,7 @@ export function calculateHealth(root: string = process.cwd()): HealthResult {
         timeout: 30000,
         stdio: 'pipe',
         cwd,
-        env: process.env,
+        env,
       });
       checksPassed++;
     } catch (e: any) {
@@ -207,7 +207,7 @@ export function calculateHealth(root: string = process.cwd()): HealthResult {
         timeout: 60000,
         stdio: 'pipe',
         cwd,
-        env: process.env,
+        env,
       });
       checksPassed++;
     } catch (e: any) {
@@ -236,13 +236,27 @@ export function calculateHealth(root: string = process.cwd()): HealthResult {
 // ---------------------------------------------------------------------------
 // Git diff helper
 // ---------------------------------------------------------------------------
+function minimalEnv(): NodeJS.ProcessEnv {
+  const env: NodeJS.ProcessEnv = {};
+  for (const key of ['PATH', 'HOME', 'LANG', 'TERM'] as const) {
+    const value = process.env[key];
+    if (value) env[key] = value;
+  }
+  for (const [key, value] of Object.entries(process.env)) {
+    if (key.startsWith('NODE_') && value) env[key] = value;
+  }
+  return env;
+}
+
 export function getGitDiff(cwd: string = process.cwd()): string {
+  const env = minimalEnv();
   try {
     let diff = execFileSync('git', ['diff', '--cached'], {
       encoding: 'utf-8',
       timeout: 10000,
       stdio: 'pipe',
       cwd,
+      env,
     });
     if (!diff) {
       diff = execFileSync('git', ['diff'], {
@@ -250,6 +264,7 @@ export function getGitDiff(cwd: string = process.cwd()): string {
         timeout: 10000,
         stdio: 'pipe',
         cwd,
+        env,
       });
     }
     return diff;

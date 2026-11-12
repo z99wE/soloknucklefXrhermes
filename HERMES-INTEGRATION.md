@@ -18,10 +18,14 @@ surface below is a thin adapter over the same three functions:
 
 - `scan_secrets(diff)`
 - `intercept_command(command)`
-- `calculate_health()`
+- `calculate_health(run_project_scripts=...)`
 
 Those three functions read `hermes-plugin/rules.json`, the same file the
-TypeScript engine imports. One rule change, every surface.
+TypeScript engine imports. One rule change, every surface. Project lint/test
+scripts in `soloknuckle_health` are opt-in (`health_run_project_scripts`,
+default `false`) and, when enabled, run with a minimal environment (never
+inheriting Hermes/provider secrets). Git diff subprocesses also use a minimal
+environment.
 
 ---
 
@@ -87,6 +91,9 @@ The expected doctor output is:
 registrations: 3 tool(s), 0 hook(s)
 ```
 
+`soloknuckle_health` reports lint/test as skipped by default unless
+`health_run_project_scripts` is enabled in plugin config.
+
 ---
 
 ## Moat
@@ -98,9 +105,9 @@ a project can go wrong:
 
 | Moment | Surface | What it prevents |
 |---|---|---|
-| Before a command runs | `soloknuckle.intercept` | Destructive shell operations |
-| Before a commit | git hook + `soloknuckle.secrets` | A credential entering git history |
-| Before a push | `soloknuckle.health` | Shipping a red build |
+| Before a command runs | `soloknuckle_intercept` | Destructive shell operations |
+| Before a commit | git hook + `soloknuckle_secrets` | A credential entering git history |
+| Before a push | `soloknuckle_health` / `soloknuckle check` | Shipping a red build |
 | During a session | `/hygiene`, skill, tools | The agent guessing instead of checking |
 | Every log line | redaction patterns | A credential landing in a transcript |
 | Every week | blueprint | Rot that nobody noticed |

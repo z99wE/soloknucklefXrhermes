@@ -134,8 +134,8 @@ def blueprint_kwargs() -> dict:
         "schedule_template": "{minute} {hour} * * {dow}",
         "prompt_template": (
             "Produce a weekly hygiene report for the current project. Call the "
-            "soloknuckle.health tool for the score and issues, then call "
-            "soloknuckle.secrets with an empty diff to scan the working tree. "
+            "soloknuckle_health tool for the score and issues, then call "
+            "soloknuckle_secrets with an empty diff to scan the working tree. "
             "Report the score and grade, every secret violation, and the top issues "
             "worth fixing this week. Do not modify files. If the score is 90 or above "
             "and there are no violations, reply with a single line saying so."

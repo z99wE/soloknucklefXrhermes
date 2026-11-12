@@ -17,19 +17,20 @@ whenever the user asks whether a project is in good shape.
 
 ## Before committing
 
-Call `soloknuckle.secrets` with the staged diff. If `clean` is false, report
+Call `soloknuckle_secrets` with the staged diff. If `clean` is false, report
 every violation with its line number and stop. Do not commit, and do not
 suggest `git commit --no-verify`.
 
 ## Before suggesting a shell command
 
-Call `soloknuckle.intercept` with the exact command string. If `blocked` is
+Call `soloknuckle_intercept` with the exact command string. If `blocked` is
 true, do not run it — say why. If `suggestion` is present, offer that instead.
 
 ## When asked about project health
 
-Call `soloknuckle.health`. Report the score, the grade, and each issue. Do not
-pad the answer.
+Call `soloknuckle_health`. Report the score, the grade, and each issue. Project
+lint/test scripts run only when `health_run_project_scripts` is enabled; if
+skipped, say so. Do not pad the answer.
 
 ## Rules
 

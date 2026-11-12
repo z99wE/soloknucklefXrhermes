@@ -113,7 +113,7 @@ def test_intercept_git_force_push():
 
 def test_health_returns_structure(monkeypatch, tmp_path):
     monkeypatch.chdir(tmp_path)  # no package.json: health must not shell out
-    result = __init__.calculate_health()
+    result = __init__.calculate_health(run_project_scripts=False)
     assert "score" in result
     assert "grade" in result
     assert "issues" in result
@@ -121,6 +121,8 @@ def test_health_returns_structure(monkeypatch, tmp_path):
     assert 0 <= result["score"] <= 100
     assert result["grade"] in ("A", "B", "C", "F")
     assert "Dependencies: no package.json" in result["issues"]
+    assert "Lint: skipped" in " ".join(result["issues"])
+    assert "Tests: skipped" in " ".join(result["issues"])
 
 
 def test_tool_handlers(monkeypatch, tmp_path):
@@ -133,6 +135,8 @@ def test_tool_handlers(monkeypatch, tmp_path):
 
     health = json.loads(__init__._run_health({}))
     assert "score" in health
+    assert "Lint: skipped" in " ".join(health["issues"])
+    assert "Tests: skipped" in " ".join(health["issues"])
 
 
 def test_redaction_patterns_are_host_safe():
@@ -150,9 +154,9 @@ def test_register_exact_surface():
 
     # Three tools, exactly.
     assert ctx.tools == [
-        "soloknuckle.secrets",
-        "soloknuckle.intercept",
-        "soloknuckle.health",
+        "soloknuckle_secrets",
+        "soloknuckle_intercept",
+        "soloknuckle_health",
     ]
 
     # Native surfaces, each declared in plugin.yaml.

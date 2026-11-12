@@ -107,9 +107,23 @@ def scan_secrets(diff: str) -> Dict[str, Any]:
     return {"clean": len(violations) == 0, "violations": violations}
 
 
+def _minimal_env() -> Dict[str, str]:
+    """Minimal environment for child processes (never inherits provider secrets)."""
+    env: Dict[str, str] = {}
+    for key in ("PATH", "HOME", "LANG", "TERM"):
+        value = os.environ.get(key)
+        if value:
+            env[key] = value
+    for key, value in os.environ.items():
+        if key.startswith("NODE_") and value:
+            env[key] = value
+    return env
+
+
 def current_git_diff(cwd: Optional[str] = None) -> str:
     """Staged diff if there is one, else unstaged. Empty string outside a repo."""
     run_cwd = cwd or os.getcwd()
+    env = _minimal_env()
     for argv in (["git", "diff", "--cached"], ["git", "diff"]):
         try:
             result = subprocess.run(
@@ -118,7 +132,7 @@ def current_git_diff(cwd: Optional[str] = None) -> str:
                 text=True,
                 timeout=10,
                 cwd=run_cwd,
-                env=os.environ.copy(),
+                env=env,
             )
         except (FileNotFoundError, subprocess.TimeoutExpired):
             return ""
@@ -165,17 +179,19 @@ def intercept_command(command: str) -> Dict[str, Any]:
 # ---------------------------------------------------------------------------
 # Health check
 # ---------------------------------------------------------------------------
-def calculate_health(cwd: Optional[str] = None) -> Dict[str, Any]:
+def calculate_health(cwd: Optional[str] = None, run_project_scripts: bool = False) -> Dict[str, Any]:
     """Run basic health checks. Returns {score, grade, issues}.
 
-    Every npm invocation is guarded by a local ``package.json``: without it,
-    ``npm`` walks up to a parent directory and lints someone else's project.
+    Project lint/test scripts are executed only when ``run_project_scripts`` is
+    True (off by default) because they run untrusted project code. When enabled,
+    they run with a minimal environment (never inheriting provider secrets).
     """
     issues: List[str] = []
     checks_passed = 0
     total_checks = 4
     cwd = cwd or os.getcwd()
     has_package_json = os.path.exists(os.path.join(cwd, "package.json"))
+    env = _minimal_env()
 
     # 1. Dependency check
     if has_package_json:
@@ -183,20 +199,19 @@ def calculate_health(cwd: Optional[str] = None) -> Dict[str, Any]:
     else:
         issues.append("Dependencies: no package.json")
 
-    # 2. Lint check
-    if not has_package_json:
+    # 2. Lint check (project script, opt-in)
+    if not run_project_scripts:
+        issues.append("Lint: skipped (enable health_run_project_scripts to run project lint)")
+    elif not has_package_json:
         issues.append("Lint: no package.json")
     else:
         try:
-            # Run the project's own script (side effects by definition) with no
-            # shell and an explicit timeout. It inherits the environment because
-            # the script may legitimately depend on it.
             result = subprocess.run(
                 ["npm", "run", "lint", "--silent"],
                 capture_output=True,
                 timeout=30,
                 cwd=cwd,
-                env=os.environ.copy(),
+                env=env,
             )
             if result.returncode == 0:
                 checks_passed += 1
@@ -207,8 +222,10 @@ def calculate_health(cwd: Optional[str] = None) -> Dict[str, Any]:
         except Exception:
             issues.append("Lint: failed")
 
-    # 3. Test check
-    if not has_package_json:
+    # 3. Test check (project script, opt-in)
+    if not run_project_scripts:
+        issues.append("Tests: skipped (enable health_run_project_scripts to run project tests)")
+    elif not has_package_json:
         issues.append("Tests: no package.json")
     else:
         try:
@@ -217,7 +234,7 @@ def calculate_health(cwd: Optional[str] = None) -> Dict[str, Any]:
                 capture_output=True,
                 timeout=60,
                 cwd=cwd,
-                env=os.environ.copy(),
+                env=env,
             )
             if result.returncode == 0:
                 checks_passed += 1
